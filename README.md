@@ -3,6 +3,9 @@ XSPF playlist plugin for foobar2000
 
 Support XSPF version 1 format
 
+### Download
+[Project release page](https://github.com/Chocobo1/foo_xspf_1/releases)
+
 ### Usage
 * To read a XSPF playlist, drag and drop the playlist to foobar2000, or just open it as you normally do (duh
 * To generate a XSPF playlist, select menu `File` -> `Save playlist...`, or right click -> `Utilities` -> `Save as playlist...`
