@@ -14,6 +14,11 @@ Support XSPF version 1 format
 * Visual Studio 2013 Express
 * Turn off [Link-time Code Generation (LTCG)](https://msdn.microsoft.com/en-us/library/xbf3tbeh.aspx) in `foobar2000_SDK` project. Switching it on gives me bad allocation error when getting info from metaDB
 
+### TODO
+Functionality to be added later:
+* Generate playlist without location element
+* Read playlist without location element
+
 ### License
 See [LICENSE](https://github.com/Chocobo1/foo_xspf_1/blob/master/LICENSE) file
 
