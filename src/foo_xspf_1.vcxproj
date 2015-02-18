@@ -82,11 +82,13 @@
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="foo_xspf_1.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="reader.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="writer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\lib\foobar2000_sdk\foobar2000\foobar2000_component_client\foobar2000_component_client.vcxproj">
