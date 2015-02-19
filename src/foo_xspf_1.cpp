@@ -156,7 +156,7 @@ class playlist_loader_xspf_1 : public playlist_loader
 				// 4.1.1.2.14.1.1.1.1 location
 				bool have_location = false;
 				const auto *track_location = x_track->FirstChildElement( "location" );
-				if( ( track_location != nullptr ) && ( track_location->GetText() != NULL ) )
+				if( ( track_location != nullptr ) && ( track_location->GetText() != nullptr ) )
 				{
 					have_location = true;
 
@@ -176,35 +176,35 @@ class playlist_loader_xspf_1 : public playlist_loader
 
 				// 4.1.1.2.14.1.1.1.3 title
 				const auto *track_title = x_track->FirstChildElement( "title" );
-				if( ( track_title != nullptr ) && ( track_title->GetText() != NULL ) )
+				if( ( track_title != nullptr ) && ( track_title->GetText() != nullptr ) )
 				{
 					f_info.meta_add( "TITLE" , track_title->GetText() );
 				}
 
 				// 4.1.1.2.14.1.1.1.4 creator
 				const auto *track_creator = x_track->FirstChildElement( "creator" );
-				if( ( track_creator != nullptr ) && ( track_creator->GetText() != NULL ) )
+				if( ( track_creator != nullptr ) && ( track_creator->GetText() != nullptr ) )
 				{
 					f_info.meta_add( "ARTIST" , track_creator->GetText() );
 				}
 
 				// 4.1.1.2.14.1.1.1.5 annotation
 				const auto *track_annotation = x_track->FirstChildElement( "annotation" );
-				if( ( track_annotation != nullptr ) && ( track_annotation->GetText() != NULL ) )
+				if( ( track_annotation != nullptr ) && ( track_annotation->GetText() != nullptr ) )
 				{
 					f_info.meta_add( "COMMENT" , track_annotation->GetText() );
 				}
 
 				// 4.1.1.2.14.1.1.1.5 album
 				const auto *track_album = x_track->FirstChildElement( "album" );
-				if( ( track_album != nullptr ) && ( track_album->GetText() != NULL ) )
+				if( ( track_album != nullptr ) && ( track_album->GetText() != nullptr ) )
 				{
 					f_info.meta_add( "ALBUM" , track_album->GetText() );
 				}
 
 				// 4.1.1.2.14.1.1.1.9 trackNum
 				const auto *track_num = x_track->FirstChildElement( "trackNum" );
-				if( ( track_num != nullptr ) && ( track_num->GetText() != NULL ) )
+				if( ( track_num != nullptr ) && ( track_num->GetText() != nullptr ) )
 				{
 					f_info.meta_add( "TRACKNUMBER" , track_num->GetText() );
 				}
