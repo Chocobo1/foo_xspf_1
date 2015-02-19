@@ -52,12 +52,18 @@ DECLARE_COMPONENT_VERSION
 );
 
 
-const char * xspfMain::get_extension()
+// setting
+static advconfig_checkbox_factory cfg_write_location( "XSPF playlist write location element" ,
+	{ 0x40c1b282 , 0xf04a , 0x4a69 , { 0x90 , 0xfe , 0x40 , 0x51 , 0xa0 , 0x3e , 0x1 , 0xa2 } } ,
+	advconfig_branch::guid_branch_tagging , 0.0 , true );
+
+
+const char * xspf::get_extension()
 {
 	return "xspf";
 }
 
-bool xspfMain::is_our_content_type( const char *p_content_type )
+bool xspf::is_our_content_type( const char *p_content_type )
 {
 	const char mime[] = "application/xspf+xml";
 	if( strcmp( p_content_type , mime ) == 0 )
@@ -65,23 +71,23 @@ bool xspfMain::is_our_content_type( const char *p_content_type )
 	return false;
 }
 
-bool xspfMain::is_associatable()
+bool xspf::is_associatable()
 {
 	return true;
 }
 
-bool xspfMain::can_write()
+bool xspf::can_write()
 {
 	return true;
 }
 
-void xspfMain::open( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort )
+void xspf::open( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort )
 {
 	open_helper( p_path , p_file , p_callback , p_abort );
 	return;
 }
 
-void xspfMain::write( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort )
+void xspf::write( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort )
 {
 	write_helper( p_path , p_file , p_data , p_abort , cfg_write_location );
 	return;
