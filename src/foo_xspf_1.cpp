@@ -54,9 +54,9 @@ class playlist_loader_xspf_1 : public playlist_loader
 	// XSPF spec: http://www.xspf.org/xspf-v1.html
 
 #define CONSOLE_HEADER "foo_xspf_1: "
-	
+
 	public:
-	const char * get_extension()
+	const char *get_extension()
 	{
 		return "xspf";
 	}
@@ -149,9 +149,12 @@ class playlist_loader_xspf_1 : public playlist_loader
 			setXmlBase( xml_base , 2 , x_track_base );
 
 			// 4.1.1.2.14.1.1.1.1 location
+			bool have_location = false;
 			const auto *track_location = x_track->FirstChildElement( "location" );
-			if( track_location != nullptr )
+			if( ( track_location != nullptr ) && ( track_location->GetText() != NULL ) )
 			{
+				have_location = true;
+
 				// location xml:base
 				const char *track_location_base = track_location->Attribute( "xml:base" );
 				setXmlBase( xml_base , 3 , track_location_base );
@@ -168,41 +171,41 @@ class playlist_loader_xspf_1 : public playlist_loader
 
 			// 4.1.1.2.14.1.1.1.3 title
 			const auto *track_title = x_track->FirstChildElement( "title" );
-			if( track_title != nullptr )
+			if( ( track_title != nullptr ) && ( track_title->GetText() != NULL ) )
 			{
 				f_info.meta_add( "TITLE" , track_title->GetText() );
 			}
 
 			// 4.1.1.2.14.1.1.1.4 creator
 			const auto *track_creator = x_track->FirstChildElement( "creator" );
-			if( track_creator != nullptr )
+			if( ( track_creator != nullptr ) && ( track_creator->GetText() != NULL ) )
 			{
 				f_info.meta_add( "ARTIST" , track_creator->GetText() );
 			}
 
 			// 4.1.1.2.14.1.1.1.5 annotation
 			const auto *track_annotation = x_track->FirstChildElement( "annotation" );
-			if( track_annotation != nullptr )
+			if( ( track_annotation != nullptr ) && ( track_annotation->GetText() != NULL ) )
 			{
 				f_info.meta_add( "COMMENT" , track_annotation->GetText() );
 			}
 
 			// 4.1.1.2.14.1.1.1.5 album
 			const auto *track_album = x_track->FirstChildElement( "album" );
-			if( track_album != nullptr )
+			if( ( track_album != nullptr ) && ( track_album->GetText() != NULL ) )
 			{
 				f_info.meta_add( "ALBUM" , track_album->GetText() );
 			}
 
 			// 4.1.1.2.14.1.1.1.9 trackNum
 			const auto *track_num = x_track->FirstChildElement( "trackNum" );
-			if( track_num != nullptr )
+			if( ( track_num != nullptr ) && ( track_num->GetText() != NULL ) )
 			{
 				f_info.meta_add( "TRACKNUMBER" , track_num->GetText() );
 			}
 
 			// insert into playlist
-			if( track_location != nullptr ) 
+			if( have_location )
 			{
 				const t_filestats f_stats = { 0 };
 				p_callback->on_entry_info( f_handle , playlist_loader_callback::entry_from_playlist , f_stats , f_info , false );
