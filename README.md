@@ -12,7 +12,7 @@ Support XSPF version 1 format
 
 ### Compile
 * Visual Studio 2013 Express
-* Turn off [Link-time Code Generation (LTCG)](https://msdn.microsoft.com/en-us/library/xbf3tbeh.aspx) in `foobar2000_SDK` project. Switching it on gives me bad allocation error when getting info from metaDB
+* [Visual Studio 2013 & 2015 compatibility notice](http://www.hydrogenaud.io/forums/index.php?showtopic=108411)
 
 ### TODO
 Functionality to be added later:
