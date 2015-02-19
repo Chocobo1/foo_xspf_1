@@ -17,7 +17,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	auto ret = x.Parse( in_file );
 	if( ret != tinyxml2::XML_NO_ERROR )
 	{
-		console::printf( CONSOLE_HEADER"XML parse error: %d" , ret );
+		console::printf( CONSOLE_HEADER"XML parse error id: %d, msg: %s" , ret , x.GetErrorStr1() );
 		throw exception_io_data();
 	}
 
