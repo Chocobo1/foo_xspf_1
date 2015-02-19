@@ -101,7 +101,7 @@ class playlist_loader_xspf_1 : public playlist_loader
 			if( x_playlist == nullptr )
 			{
 				console::printf( CONSOLE_HEADER"missing playlist element!" );
-				throw exception_io_data_truncation();
+				throw exception_io_data();
 			}
 			// playlist xml:base
 			const char *x_playlist_base = x_playlist->Attribute( "xml:base" );
@@ -112,14 +112,14 @@ class playlist_loader_xspf_1 : public playlist_loader
 			if( x_playlist_ns == nullptr )
 			{
 				console::printf( CONSOLE_HEADER"missing xmlns attribute!" );
-				throw exception_io_data_truncation();
+				throw exception_io_data();
 			}
 			const pfc::string8 ns = "http://xspf.org/ns/0/";
 			const int x_playlist_ns_eq = strncmp( x_playlist_ns , ns , ns.get_length() );
 			if( x_playlist_ns_eq != 0 )
 			{
 				console::printf( CONSOLE_HEADER"namespace error: %s" , x_playlist_ns );
-				throw exception_io_unsupported_format();
+				throw exception_io_data();
 			}
 
 			// 4.1.1.1.2 version
@@ -128,7 +128,7 @@ class playlist_loader_xspf_1 : public playlist_loader
 			if( ( x_playlist_version < 0 ) || ( x_playlist_version > 1 ) )
 			{
 				console::printf( CONSOLE_HEADER"version error: %d" , x_playlist_version );
-				throw exception_io_unsupported_format();
+				throw exception_io_data();
 			}
 
 			// 4.1.1.2.14 trackList
@@ -136,7 +136,7 @@ class playlist_loader_xspf_1 : public playlist_loader
 			if( x_tracklist == nullptr )
 			{
 				console::printf( CONSOLE_HEADER"missing trackList element!" );
-				throw exception_io_data_truncation();
+				throw exception_io_data();
 			}
 			// trackList xml:base
 			const char *x_tracklist_base = x_tracklist->Attribute( "xml:base" );
