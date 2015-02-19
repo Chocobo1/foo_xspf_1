@@ -109,6 +109,11 @@ class playlist_loader_xspf_1 : public playlist_loader
 
 			// 4.1.1.1.1 xmlns
 			const char *x_playlist_ns = x_playlist->Attribute( "xmlns" );
+			if( x_playlist_ns == nullptr )
+			{
+				console::printf( CONSOLE_HEADER"missing xmlns attribute!" );
+				throw exception_io_data_truncation();
+			}
 			const pfc::string8 ns = "http://xspf.org/ns/0/";
 			const int x_playlist_ns_eq = strncmp( x_playlist_ns , ns , ns.get_length() );
 			if( x_playlist_ns_eq != 0 )
