@@ -54,11 +54,11 @@ DECLARE_COMPONENT_VERSION
 
 // setting
 static advconfig_checkbox_factory cfg_write_location( "XSPF playlist write location element" ,
-	{ 0x40c1b282 , 0xf04a , 0x4a69 , { 0x90 , 0xfe , 0x40 , 0x51 , 0xa0 , 0x3e , 0x1 , 0xa2 } } ,
-	advconfig_branch::guid_branch_tagging , 0.0 , true );
+{ 0x40c1b282 , 0xf04a , 0x4a69 , { 0x90 , 0xfe , 0x40 , 0x51 , 0xa0 , 0x3e , 0x1 , 0xa2 } } ,
+advconfig_branch::guid_branch_tagging , 0.0 , true );
 
 
-const char * xspf::get_extension()
+const char *xspf::get_extension()
 {
 	return "xspf";
 }
@@ -92,3 +92,56 @@ void xspf::write( const char *p_path , const service_ptr_t<file> &p_file , metad
 	write_helper( p_path , p_file , p_data , p_abort , cfg_write_location );
 	return;
 }
+
+
+
+
+
+
+
+class test : public initquit
+{
+	public:
+
+
+
+		virtual void on_init()
+		{
+#if 0
+			const static_api_ptr_t<library_manager>aaa;
+
+			if( aaa->is_library_enabled() )
+				console::printf( "library enabled" );
+			else
+			{
+				console::printf( "library disabled" );
+				return;
+			}
+
+			pfc::list_t<metadb_handle_ptr> p_out;
+			aaa->get_all_items( p_out );
+
+			console::printf( "library size: %d" , p_out.get_size() );
+
+			filterField( &p_out , "ARTIST" , "ANIME THAT JAZZ" );
+			//	filterField( &p_out , "TITLE" , "1" );
+			filterField( &p_out , "TRACKNUMBER" , "5" );
+
+			console::printf( "after size: %d" , p_out.get_size() );
+#endif
+
+
+
+
+			return;
+		}
+
+
+
+
+		virtual void on_quit()
+		{
+			return;
+		}
+};
+initquit_factory_t<test> g_foo;

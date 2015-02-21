@@ -6,6 +6,40 @@
 static const t_size XMLBASE_LEN = 4;  // 1 string for each playlist.trackList.track.location
 
 
+struct mainThreadTask : public main_thread_callback
+{
+	public:
+		virtual void callback_run()
+		{
+			static_api_ptr_t < library_manager >m;
+			switch( task_sel )
+			{
+				case 1:
+				{
+					m->get_all_items( list );
+					list_ptr.set_value( &list );
+					break;
+				}
+
+				default:
+				{
+					console::printf( CONSOLE_HEADER"Invalid task_sel: %d" , task_sel );
+					return;
+				}
+			};
+
+			task_sel = -1;
+			return;
+		}
+
+
+		int task_sel = -1;
+
+		pfc::list_t<metadb_handle_ptr> list;
+		std::promise< pfc::list_t<metadb_handle_ptr>* > list_ptr;
+};
+
+
 void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort )
 {
 	// load file
@@ -72,77 +106,93 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	// 4.1.1.2.14.1.1 track
 	for( auto *x_track = x_tracklist->FirstChildElement( "track" ) ; x_track != nullptr ; x_track = x_track->NextSiblingElement( "track" ) )
 	{
-		// file info variables
-		metadb_handle_ptr f_handle;
-		file_info_impl f_info;
-
 		// track xml:base
 		const char *x_track_base = x_track->Attribute( "xml:base" );
 		setXmlBase( xml_base , 2 , x_track_base );
 
 		// 4.1.1.2.14.1.1.1.1 location
-		bool have_location = false;
 		const auto *track_location = x_track->FirstChildElement( "location" );
 		if( ( track_location != nullptr ) && ( track_location->GetText() != nullptr ) )
 		{
-			have_location = true;
-
-			// location xml:base
-			const char *track_location_base = track_location->Attribute( "xml:base" );
-			setXmlBase( xml_base , 3 , track_location_base );
-
-			// ONLY HANDLE PLAYABLE FILES OR URLS, LINKING TO ANOTHER PLAYLIST IS NOT SUPPORTED
-			pfc::string8 out_str;
-			uriToLocation( track_location->GetText() , p_path , xml_base , &out_str );
-			if( !out_str.is_empty() )
-			{
-				p_callback->on_progress( out_str );
-				p_callback->handle_create( f_handle , make_playable_location( out_str , 0 ) );
-			}
+			// have location
+			open_helper_location( p_path , p_callback , x_track , xml_base );
 		}
-
-		// 4.1.1.2.14.1.1.1.3 title
-		const auto *track_title = x_track->FirstChildElement( "title" );
-		if( ( track_title != nullptr ) && ( track_title->GetText() != nullptr ) )
+		else
 		{
-			f_info.meta_add( "TITLE" , track_title->GetText() );
-		}
+			// library_manager class could only be used in main thread, here is worker thread
+			static_api_ptr_t<main_thread_callback_manager>m;
+			service_ptr_t<mainThreadTask> m_task( new service_impl_t<mainThreadTask>() );
 
-		// 4.1.1.2.14.1.1.1.4 creator
-		const auto *track_creator = x_track->FirstChildElement( "creator" );
-		if( ( track_creator != nullptr ) && ( track_creator->GetText() != nullptr ) )
-		{
-			f_info.meta_add( "ARTIST" , track_creator->GetText() );
-		}
+			// get media library
+			m_task->task_sel = 1;
+			auto list_ptr = m_task->list_ptr.get_future();
 
-		// 4.1.1.2.14.1.1.1.5 annotation
-		const auto *track_annotation = x_track->FirstChildElement( "annotation" );
-		if( ( track_annotation != nullptr ) && ( track_annotation->GetText() != nullptr ) )
-		{
-			f_info.meta_add( "COMMENT" , track_annotation->GetText() );
-		}
-
-		// 4.1.1.2.14.1.1.1.5 album
-		const auto *track_album = x_track->FirstChildElement( "album" );
-		if( ( track_album != nullptr ) && ( track_album->GetText() != nullptr ) )
-		{
-			f_info.meta_add( "ALBUM" , track_album->GetText() );
-		}
-
-		// 4.1.1.2.14.1.1.1.9 trackNum
-		const auto *track_num = x_track->FirstChildElement( "trackNum" );
-		if( ( track_num != nullptr ) && ( track_num->GetText() != nullptr ) )
-		{
-			f_info.meta_add( "TRACKNUMBER" , track_num->GetText() );
-		}
-
-		// insert into playlist
-		if( have_location )
-		{
-			const t_filestats f_stats = { 0 };
-			p_callback->on_entry_info( f_handle , playlist_loader_callback::entry_from_playlist , f_stats , f_info , false );
+			m->add_callback( m_task );
+			open_helper_no_location( p_callback , x_track , list_ptr.get() );
 		}
 	}
+
+	return;
+}
+
+void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , pfc::string8 xml_base[] )
+{
+	const auto *track_location = x_track->FirstChildElement( "location" );
+
+	// location xml:base
+	const char *track_location_base = track_location->Attribute( "xml:base" );
+	setXmlBase( xml_base , 3 , track_location_base );
+
+	// file info variables
+	file_info_impl f_info;
+	metadb_handle_ptr f_handle;
+
+	// ONLY HANDLE PLAYABLE FILES OR URLS, LINKING TO ANOTHER PLAYLIST IS NOT SUPPORTED
+	pfc::string8 out_str;
+	uriToPath( track_location->GetText() , p_path , xml_base , &out_str );
+	if( !out_str.is_empty() )
+	{
+		p_callback->on_progress( out_str );
+		p_callback->handle_create( f_handle , make_playable_location( out_str , 0 ) );
+	}
+
+	// 4.1.1.2.14.1.1.1.3 title
+	addInfo( x_track , &f_info , "title" , "TITLE" );
+
+	// 4.1.1.2.14.1.1.1.4 creator
+	addInfo( x_track , &f_info , "creator" , "ARTIST" );
+
+	// 4.1.1.2.14.1.1.1.5 annotation
+	addInfo( x_track , &f_info , "annotation" , "COMMENT" );
+
+	// 4.1.1.2.14.1.1.1.5 album
+	addInfo( x_track , &f_info , "album" , "ALBUM" );
+
+	// 4.1.1.2.14.1.1.1.9 trackNum
+	addInfo( x_track , &f_info , "trackNum" , "TRACKNUMBER" );
+
+	// insert into playlist
+	const t_filestats f_stats = { 0 };
+	p_callback->on_entry_info( f_handle , playlist_loader_callback::entry_from_playlist , f_stats , f_info , false );
+
+	return;
+}
+
+void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , pfc::list_t<metadb_handle_ptr> *list )
+{
+	console::printf( "library size: %d" , list->get_size() );
+
+
+	filterField( list , "ALBUM" , "" );
+	filterField( list , "TITLE" , "" );
+	filterField( list , "ARTIST" , "" );
+	filterField( list , "TRACKNUMBER" , "" );
+
+	console::printf( "after size: %d" , list->get_size() );
+
+	// add the first result to playlist
+
+
 
 	return;
 }
@@ -181,8 +231,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 	x_playlist->InsertEndChild( x_tracklist );
 
 	// for each track
-	const t_size num_entries = p_data.get_size();
-	for( t_size i = 0 ; i < num_entries ; ++i )
+	for( t_size i = 0 , max = p_data.get_size(); i < max ; ++i )
 	{
 		// fetch track info
 		const metadb_handle_ptr track_item = p_data.get_item( i );
@@ -203,7 +252,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		{
 			const char *item_path = track_item->get_path();
 			pfc::string8 track_path;
-			locationToUri( item_path , p_path , &track_path );
+			pathToUri( item_path , p_path , &track_path );
 			if( !track_path.is_empty() )
 			{
 				auto track_location = x.NewElement( "location" );
@@ -289,7 +338,56 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 }
 
 
-void locationToUri( const char *in_path , const char *ref_path , pfc::string8 *out )
+void addInfo( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const char* x_name , const char *db_name )
+{
+	const auto *info = x_parent->FirstChildElement( x_name );
+	if( ( info != nullptr ) && ( info->GetText() != nullptr ) )
+	{
+		f->meta_add( db_name , info->GetText() );
+	}
+
+	return;
+}
+
+void filterField( pfc::list_t<metadb_handle_ptr> *list , const char *field , const char *target )
+{
+	// TODO: convert to lower case first for ascii !?
+
+
+	if( target == nullptr )
+		return;
+
+	pfc::list_t<metadb_handle_ptr> new_list;
+	for( t_size n = 0 , max = list->get_count(); n < max ; ++n )
+	{
+		// get item from db
+		const metadb_handle_ptr item = list->get_item( n );
+		file_info_impl info;
+		bool ret = item->get_info( info );
+		if( !ret )
+		{
+			console::printf( CONSOLE_HEADER"get_info error2" );
+			continue;
+		}
+		const char *str = info.meta_get( field , 0 );
+		if( str != nullptr )
+		{
+			// partial match
+			const pfc::string8 s = str;
+			const bool match = s.find_first( target ) < s.get_length() ? true : false ;
+
+			if( match )
+			{
+				new_list += item;
+			}
+		}
+	}
+
+	list->move_from( new_list );
+}
+
+
+void pathToUri( const char *in_path , const char *ref_path , pfc::string8 *out )
 {
 	out->reset();
 
@@ -314,7 +412,7 @@ void locationToUri( const char *in_path , const char *ref_path , pfc::string8 *o
 	return;
 }
 
-void uriToLocation( const char *in_uri , const char *ref_path , const pfc::string8 base[] , pfc::string8 *out )
+void uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 base[] , pfc::string8 *out )
 {
 	out->reset();
 
@@ -334,16 +432,15 @@ void uriToLocation( const char *in_uri , const char *ref_path , const pfc::strin
 		in_str.replace_string( "file:///" , "" );
 		in_str.replace_string( "/" , "\\" );
 
-		// check if absolute path
-		const t_size col_pos = in_str.find_first( ':' );
-		const bool is_relative_path = ( col_pos < in_str.get_length() ) ? false : true ;
+		// check if relative path
+		const bool is_relative_path = ( in_str.find_first( ':' ) < in_str.get_length() ) ? false : true ;
 		if( is_relative_path )
 		{
-			// add relative path
-			pfc::string8 rel_path = ref_path;
-			rel_path.truncate_to_parent_path();
-			rel_path.fix_dir_separator();
-			*out += rel_path;
+			// add parent path
+			pfc::string8 par_path = ref_path;
+			par_path.truncate_to_parent_path();
+			par_path.fix_dir_separator();
+			*out += par_path;
 		}
 	}
 	*out += in_str;
