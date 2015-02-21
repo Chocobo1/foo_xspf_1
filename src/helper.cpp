@@ -104,6 +104,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	setXmlBase( xml_base , 1 , x_tracklist_base );
 
 	// 4.1.1.2.14.1.1 track
+	pfc::list_t<metadb_handle_ptr> list_cache;  // don't queue CB for every <track>
 	for( auto *x_track = x_tracklist->FirstChildElement( "track" ) ; x_track != nullptr ; x_track = x_track->NextSiblingElement( "track" ) )
 	{
 		// track xml:base
@@ -119,16 +120,25 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 		}
 		else
 		{
-			// library_manager class could only be used in main thread, here is worker thread
-			static_api_ptr_t<main_thread_callback_manager>m;
-			service_ptr_t<mainThreadTask> m_task( new service_impl_t<mainThreadTask>() );
+			// get required infos to open_helper_no_location()
+			if( list_cache.get_count() == 0 )
+			{
+				// first time init
 
-			// get media library
-			m_task->task_sel = 1;
-			auto list_ptr = m_task->list_ptr.get_future();
+				// library_manager class could only be used in main thread, here is worker thread
+				static_api_ptr_t<main_thread_callback_manager>m;
+				service_ptr_t<mainThreadTask> m_task( new service_impl_t<mainThreadTask>() );
 
-			m->add_callback( m_task );
-			open_helper_no_location( p_callback , x_track , list_ptr.get() );
+				// get media library
+				m_task->task_sel = 1;
+				auto list_ptr = m_task->list_ptr.get_future();
+
+				m->add_callback( m_task );
+				list_cache.move_from( *( list_ptr.get() ) );
+			}
+
+			pfc::list_t<metadb_handle_ptr> list = list_cache;  // make copy
+			open_helper_no_location( p_callback , x_track , &list );
 		}
 	}
 
