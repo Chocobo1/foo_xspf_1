@@ -104,8 +104,9 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	setXmlBase( xml_base , 1 , x_tracklist_base );
 
 	// 4.1.1.2.14.1.1 track
+	t_size counter = 0;
 	pfc::list_t<metadb_handle_ptr> list_cache;  // don't queue CB for every <track>
-	for( auto *x_track = x_tracklist->FirstChildElement( "track" ) ; x_track != nullptr ; x_track = x_track->NextSiblingElement( "track" ) )
+	for( auto *x_track = x_tracklist->FirstChildElement( "track" ) ; x_track != nullptr ; x_track = x_track->NextSiblingElement( "track" ) , ++counter )
 	{
 		// track xml:base
 		const char *x_track_base = x_track->Attribute( "xml:base" );
@@ -138,7 +139,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 			}
 
 			pfc::list_t<metadb_handle_ptr> list = list_cache;  // make copy
-			open_helper_no_location( p_callback , x_track , &list );
+			open_helper_no_location( p_callback , x_track , &list , counter );
 		}
 	}
 
@@ -188,9 +189,9 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	return;
 }
 
-void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , pfc::list_t<metadb_handle_ptr> *list )
+void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , pfc::list_t<metadb_handle_ptr> *list , const t_size c )
 {
-//	p_callback->on_progress( out_str );
+	p_callback->on_progress( ( "track " + std::to_string( c ) ).c_str() );
 
 	console::printf( "library size: %d" , list->get_size() );
 
@@ -371,7 +372,7 @@ void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , c
 
 void filterFieldHelper( const tinyxml2::XMLElement *x_parent , pfc::list_t<metadb_handle_ptr> *list , const char *x_name , const char *db_name )
 {
-	// TODO: convert to lower case first for ascii !?
+	// TODO: should convert to lower case first for ascii chars!?
 
 	// prepare
 	const auto *x = x_parent->FirstChildElement( x_name );
@@ -405,10 +406,11 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , pfc::list_t<metad
 		if( match )
 		{
 			new_list += item;
-		}	
+		}
 	}
 
 	list->move_from( new_list );
+	return;
 }
 
 
