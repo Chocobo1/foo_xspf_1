@@ -210,9 +210,11 @@ void open_helper_no_location( playlist_loader_callback::ptr p_callback , const t
 	console::printf( "after size: %d" , list->get_size() );
 
 	// add the first result to playlist
-	for( t_size i = 0 , max = (true ? 1 : list->get_count()) ; i < max ; ++i )
+	for( t_size i = 0 , max = list->get_count() ; i < max ; ++i )
 	{
 		p_callback->on_entry( list->get_item( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
+		if( true )
+			break;
 	}
 
 	return;
