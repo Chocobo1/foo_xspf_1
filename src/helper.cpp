@@ -16,7 +16,7 @@ struct mainThreadTask : public main_thread_callback
 			{
 				case 0:
 				{
-					is_library_enabled.set_value(m->is_library_enabled());
+					is_library_enabled.set_value( m->is_library_enabled() );
 					break;
 				}
 
@@ -129,7 +129,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 		}
 		else
 		{
-			// get required infos to open_helper_no_location()
+			// minimize async calls
 			if( list_cache.get_count() == 0 )
 			{
 				// first time init
@@ -212,7 +212,7 @@ void open_helper_no_location( playlist_loader_callback::ptr p_callback , const t
 {
 	p_callback->on_progress( ( "track " + std::to_string( c ) ).c_str() );
 
-	console::printf( "library size: %d" , list->get_size() );
+	console::printf( "init size: %d" , list->get_size() );
 
 	// 4.1.1.2.14.1.1.1.5 album
 	filterFieldHelper( x_track , list , "album" , "ALBUM" );
@@ -226,7 +226,7 @@ void open_helper_no_location( playlist_loader_callback::ptr p_callback , const t
 	// 4.1.1.2.14.1.1.1.9 trackNum
 	filterFieldHelper( x_track , list , "trackNum" , "TRACKNUMBER" );
 
-	console::printf( "after size: %d" , list->get_size() );
+	console::printf( "final size: %d" , list->get_size() );
 
 	// add the first result to playlist
 	for( t_size i = 0 , max = list->get_count() ; i < max ; ++i )
