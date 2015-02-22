@@ -451,6 +451,12 @@ void pathToUri( const char *in_path , const char *ref_path , pfc::string8 *out )
 			path_str = tmp_str;
 		}
 		path_str.replace_string( "file://" , "file:///" );
+
+		// when loaded a track with <location> while it's not in metadb and fb2k didn't reads its meta yet. the generated xspf playlist will not have "file://" scheme
+		if( !path_str.has_prefix_i( "file:/" ) )
+		{
+			path_str.insert_chars(0,"file:///");
+		}
 	}
 
 	// create URI
