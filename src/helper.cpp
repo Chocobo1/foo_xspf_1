@@ -277,11 +277,11 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 	{
 		// fetch track info
 		const metadb_handle_ptr track_item = p_data.get_item( i );
-		file_info_impl track_info;
-		bool ret = track_item->get_info( track_info );
+		metadb_info_container::ptr track_info;
+		bool ret = track_item->get_info_ref( track_info );
 		if( !ret )
 		{
-			console::printf( CONSOLE_HEADER"get_info error" );
+			console::printf( CONSOLE_HEADER"get_info_ref error" );
 			continue;
 		}
 
@@ -304,45 +304,45 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		}
 
 		// 4.1.1.2.14.1.1.1.3 title
-		if( track_info.meta_exists( "TITLE" ) )
+		if( track_info->info().meta_exists( "TITLE" ) )
 		{
-			const char *str = track_info.meta_get( "TITLE" , 0 );
+			const char *str = track_info->info().meta_get( "TITLE" , 0 );
 			auto track_title = x.NewElement( "title" );
 			x_track->InsertEndChild( track_title );
 			track_title->SetText( str );
 		}
 
 		// 4.1.1.2.14.1.1.1.4 creator
-		if( track_info.meta_exists( "ARTIST" ) )
+		if( track_info->info().meta_exists( "ARTIST" ) )
 		{
-			const char *str = track_info.meta_get( "ARTIST" , 0 );
+			const char *str = track_info->info().meta_get( "ARTIST" , 0 );
 			auto track_creator = x.NewElement( "creator" );
 			x_track->InsertEndChild( track_creator );
 			track_creator->SetText( str );
 		}
 
 		// 4.1.1.2.14.1.1.1.5 annotation
-		if( track_info.meta_exists( "COMMENT" ) )
+		if( track_info->info().meta_exists( "COMMENT" ) )
 		{
-			const char *str = track_info.meta_get( "COMMENT" , 0 );
+			const char *str = track_info->info().meta_get( "COMMENT" , 0 );
 			auto track_annotation = x.NewElement( "annotation" );
 			x_track->InsertEndChild( track_annotation );
 			track_annotation->SetText( str );
 		}
 
 		// 4.1.1.2.14.1.1.1.8 album
-		if( track_info.meta_exists( "ALBUM" ) )
+		if( track_info->info().meta_exists( "ALBUM" ) )
 		{
-			const char *str = track_info.meta_get( "ALBUM" , 0 );
+			const char *str = track_info->info().meta_get( "ALBUM" , 0 );
 			auto track_album = x.NewElement( "album" );
 			x_track->InsertEndChild( track_album );
 			track_album->SetText( str );
 		}
 
 		// 4.1.1.2.14.1.1.1.9 trackNum
-		if( track_info.meta_exists( "TRACKNUMBER" ) )
+		if( track_info->info().meta_exists( "TRACKNUMBER" ) )
 		{
-			const char *str = track_info.meta_get( "TRACKNUMBER" , 0 );
+			const char *str = track_info->info().meta_get( "TRACKNUMBER" , 0 );
 			const long int num = strtol( str , NULL , 10 );
 			if( num > 0 )
 			{
@@ -408,16 +408,16 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , pfc::list_t<metad
 	for( t_size i = 0 , max = list->get_count(); i < max ; ++i )
 	{
 		// get item from db
-		const metadb_handle_ptr item = list->get_item( i );
-		file_info_impl info;
-		bool ret = item->get_info( info );
+		const auto item = list->get_item( i );
+		metadb_info_container::ptr info;
+		bool ret = item->get_info_ref( info );
 		if( !ret )
 		{
-			console::printf( CONSOLE_HEADER"get_info error2" );
+			console::printf( CONSOLE_HEADER"get_info_ref2 error" );
 			continue;
 		}
 
-		const char *str = info.meta_get( db_name , 0 );
+		const char *str = info->info().meta_get( db_name , 0 );
 		if( str == nullptr )
 			continue;
 
