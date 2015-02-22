@@ -157,8 +157,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 				list_cache.move_from( *( list_ptr.get() ) );
 			}
 
-			pfc::list_t<metadb_handle_ptr> list = list_cache;  // make copy
-			open_helper_no_location( p_callback , x_track , &list , counter );
+			open_helper_no_location( p_callback , x_track , &list_cache , counter );
 		}
 	}
 
@@ -208,30 +207,32 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	return;
 }
 
-void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , pfc::list_t<metadb_handle_ptr> *list , const t_size c )
+void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const pfc::list_t<metadb_handle_ptr> *list , const t_size c )
 {
-	p_callback->on_progress( ( "track " + std::to_string( c ) ).c_str() );
-
 	console::printf( "init size: %d" , list->get_size() );
 
+
+	p_callback->on_progress( ( "track " + std::to_string( c ) ).c_str() );
+	pfc::list_t<metadb_handle_ptr> new_list;
+
 	// 4.1.1.2.14.1.1.1.5 album
-	filterFieldHelper( x_track , list , "album" , "ALBUM" );
+	filterFieldHelper( x_track , list , "album" , "ALBUM" , &new_list );
 
 	// 4.1.1.2.14.1.1.1.3 title
-	filterFieldHelper( x_track , list , "title" , "TITLE" );
+	filterFieldHelper( x_track , &new_list , "title" , "TITLE" , &new_list );
 
 	// 4.1.1.2.14.1.1.1.4 creator
-	filterFieldHelper( x_track , list , "creator" , "ARTIST" );
+	filterFieldHelper( x_track , &new_list , "creator" , "ARTIST" , &new_list );
 
 	// 4.1.1.2.14.1.1.1.9 trackNum
-	filterFieldHelper( x_track , list , "trackNum" , "TRACKNUMBER" );
+	filterFieldHelper( x_track , &new_list , "trackNum" , "TRACKNUMBER" , &new_list );
 
 	console::printf( "final size: %d" , list->get_size() );
 
 	// add the first result to playlist
-	for( t_size i = 0 , max = list->get_count() ; i < max ; ++i )
+	for( t_size i = 0 , max = new_list.get_count() ; i < max ; ++i )
 	{
-		p_callback->on_entry( list->get_item( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
+		p_callback->on_entry( new_list.get_item( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
 		if( true )
 			break;
 	}
@@ -391,7 +392,7 @@ void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , c
 	return;
 }
 
-void filterFieldHelper( const tinyxml2::XMLElement *x_parent , pfc::list_t<metadb_handle_ptr> *list , const char *x_name , const char *db_name )
+void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const pfc::list_t<metadb_handle_ptr> *list , const char *x_name , const char *db_name , pfc::list_t<metadb_handle_ptr> *out )
 {
 	// TODO: should convert to lower case first for ascii chars!?
 
@@ -404,7 +405,7 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , pfc::list_t<metad
 		return;
 
 	// scan through list
-	pfc::list_t<metadb_handle_ptr> new_list;
+	pfc::list_t<metadb_handle_ptr> tmp_list;
 	for( t_size i = 0 , max = list->get_count(); i < max ; ++i )
 	{
 		// get item from db
@@ -426,11 +427,11 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , pfc::list_t<metad
 		const bool match = s.find_first( x_field ) < s.get_length() ? true : false ;
 		if( match )
 		{
-			new_list += item;
+			tmp_list += item;
 		}
 	}
 
-	list->move_from( new_list );
+	out->move_from( tmp_list );
 	return;
 }
 
