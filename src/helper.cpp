@@ -227,7 +227,7 @@ void open_helper_no_location( playlist_loader_callback::ptr p_callback , const t
 	// add result
 	for( t_size i = 0 , max = new_list.get_count() ; i < max ; ++i )
 	{
-		p_callback->on_entry( new_list.get_item( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
+		p_callback->on_entry( new_list.get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
 		if( true )
 			break;
 	}
@@ -404,7 +404,7 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const pfc::list_t
 	for( t_size i = 0 , max = list->get_count(); i < max ; ++i )
 	{
 		// get item from db
-		const auto item = list->get_item( i );
+		const auto item = list->get_item_ref( i );
 		metadb_info_container::ptr info;
 		bool ret = item->get_async_info_ref( info );
 		if( !ret )
