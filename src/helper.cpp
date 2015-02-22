@@ -14,6 +14,12 @@ struct mainThreadTask : public main_thread_callback
 			static_api_ptr_t < library_manager >m;
 			switch( task_sel )
 			{
+				case 0:
+				{
+					is_library_enabled.set_value(m->is_library_enabled());
+					break;
+				}
+
 				case 1:
 				{
 					m->get_all_items( list );
@@ -34,6 +40,8 @@ struct mainThreadTask : public main_thread_callback
 
 
 		int task_sel = -1;
+
+		std::promise<bool> is_library_enabled;
 
 		pfc::list_t<metadb_handle_ptr> list;
 		std::promise< pfc::list_t<metadb_handle_ptr>* > list_ptr;
@@ -129,6 +137,17 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 				// library_manager class could only be used in main thread, here is worker thread
 				static_api_ptr_t<main_thread_callback_manager>m;
 				service_ptr_t<mainThreadTask> m_task( new service_impl_t<mainThreadTask>() );
+
+				// get library status
+				m_task->task_sel = 0;
+				auto is_library = m_task->is_library_enabled.get_future();
+
+				m->add_callback( m_task );
+				if( !is_library.get() )
+				{
+					console::printf( CONSOLE_HEADER"Media library is not enabled, please configure it first" );
+					return;
+				}
 
 				// get media library
 				m_task->task_sel = 1;
