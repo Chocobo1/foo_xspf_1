@@ -167,42 +167,52 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	}
 
 	// 4.1.1.2.14.1.1.1.3 title
-	addInfo( x_track , &f_info , "title" , "TITLE" );
+	addInfoHelper( x_track , &f_info , "title" , "TITLE" );
 
 	// 4.1.1.2.14.1.1.1.4 creator
-	addInfo( x_track , &f_info , "creator" , "ARTIST" );
+	addInfoHelper( x_track , &f_info , "creator" , "ARTIST" );
 
 	// 4.1.1.2.14.1.1.1.5 annotation
-	addInfo( x_track , &f_info , "annotation" , "COMMENT" );
+	addInfoHelper( x_track , &f_info , "annotation" , "COMMENT" );
 
 	// 4.1.1.2.14.1.1.1.5 album
-	addInfo( x_track , &f_info , "album" , "ALBUM" );
+	addInfoHelper( x_track , &f_info , "album" , "ALBUM" );
 
 	// 4.1.1.2.14.1.1.1.9 trackNum
-	addInfo( x_track , &f_info , "trackNum" , "TRACKNUMBER" );
+	addInfoHelper( x_track , &f_info , "trackNum" , "TRACKNUMBER" );
 
 	// insert into playlist
 	const t_filestats f_stats = { 0 };
-	p_callback->on_entry_info( f_handle , playlist_loader_callback::entry_from_playlist , f_stats , f_info , false );
+	p_callback->on_entry_info( f_handle , playlist_loader_callback::entry_user_requested , f_stats , f_info , false );
 
 	return;
 }
 
 void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , pfc::list_t<metadb_handle_ptr> *list )
 {
+//	p_callback->on_progress( out_str );
+
 	console::printf( "library size: %d" , list->get_size() );
 
+	// 4.1.1.2.14.1.1.1.5 album
+	filterFieldHelper( x_track , list , "album" , "ALBUM" );
 
-	filterField( list , "ALBUM" , "" );
-	filterField( list , "TITLE" , "" );
-	filterField( list , "ARTIST" , "" );
-	filterField( list , "TRACKNUMBER" , "" );
+	// 4.1.1.2.14.1.1.1.3 title
+	filterFieldHelper( x_track , list , "title" , "TITLE" );
+
+	// 4.1.1.2.14.1.1.1.4 creator
+	filterFieldHelper( x_track , list , "creator" , "ARTIST" );
+
+	// 4.1.1.2.14.1.1.1.9 trackNum
+	filterFieldHelper( x_track , list , "trackNum" , "TRACKNUMBER" );
 
 	console::printf( "after size: %d" , list->get_size() );
 
 	// add the first result to playlist
-
-
+	for( t_size i = 0 , max = (true ? 1 : list->get_count()) ; i < max ; ++i )
+	{
+		p_callback->on_entry( list->get_item( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
+	}
 
 	return;
 }
@@ -348,7 +358,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 }
 
 
-void addInfo( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const char* x_name , const char *db_name )
+void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const char* x_name , const char *db_name )
 {
 	const auto *info = x_parent->FirstChildElement( x_name );
 	if( ( info != nullptr ) && ( info->GetText() != nullptr ) )
@@ -359,19 +369,24 @@ void addInfo( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const c
 	return;
 }
 
-void filterField( pfc::list_t<metadb_handle_ptr> *list , const char *field , const char *target )
+void filterFieldHelper( const tinyxml2::XMLElement *x_parent , pfc::list_t<metadb_handle_ptr> *list , const char *x_name , const char *db_name )
 {
 	// TODO: convert to lower case first for ascii !?
 
-
-	if( target == nullptr )
+	// prepare
+	const auto *x = x_parent->FirstChildElement( x_name );
+	if( x == nullptr )
+		return;
+	const char *x_field = x->GetText();
+	if( x_field == nullptr )
 		return;
 
+	// scan through list
 	pfc::list_t<metadb_handle_ptr> new_list;
-	for( t_size n = 0 , max = list->get_count(); n < max ; ++n )
+	for( t_size i = 0 , max = list->get_count(); i < max ; ++i )
 	{
 		// get item from db
-		const metadb_handle_ptr item = list->get_item( n );
+		const metadb_handle_ptr item = list->get_item( i );
 		file_info_impl info;
 		bool ret = item->get_info( info );
 		if( !ret )
@@ -379,18 +394,18 @@ void filterField( pfc::list_t<metadb_handle_ptr> *list , const char *field , con
 			console::printf( CONSOLE_HEADER"get_info error2" );
 			continue;
 		}
-		const char *str = info.meta_get( field , 0 );
-		if( str != nullptr )
-		{
-			// partial match
-			const pfc::string8 s = str;
-			const bool match = s.find_first( target ) < s.get_length() ? true : false ;
 
-			if( match )
-			{
-				new_list += item;
-			}
-		}
+		const char *str = info.meta_get( db_name , 0 );
+		if( str == nullptr )
+			continue;
+
+		// partial match
+		const pfc::string8 s = str;
+		const bool match = s.find_first( x_field ) < s.get_length() ? true : false ;
+		if( match )
+		{
+			new_list += item;
+		}	
 	}
 
 	list->move_from( new_list );
