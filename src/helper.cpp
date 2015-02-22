@@ -273,13 +273,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 	{
 		// fetch track info
 		const metadb_handle_ptr track_item = p_data.get_item( i );
-		metadb_info_container::ptr track_info;
-		bool ret = track_item->get_async_info_ref( track_info );
-		if( !ret )
-		{
-			console::printf( CONSOLE_HEADER"get_async_info_ref error" );
-			continue;
-		}
+		const auto track_info = track_item->get_async_info_ref();
 
 		// 4.1.1.2.14.1.1 track
 		auto x_track = x.NewElement( "track" );
@@ -389,8 +383,6 @@ void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , c
 
 void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const pfc::list_t<metadb_handle_ptr> *list , const char *x_name , const char *db_name , pfc::list_t<metadb_handle_ptr> *out )
 {
-	// TODO: should convert to lower case first for ascii chars!?
-
 	// prepare
 	const auto *x = x_parent->FirstChildElement( x_name );
 	if( x == nullptr )
@@ -405,19 +397,14 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const pfc::list_t
 	{
 		// get item from db
 		const auto item = list->get_item_ref( i );
-		metadb_info_container::ptr info;
-		bool ret = item->get_async_info_ref( info );
-		if( !ret )
-		{
-			console::printf( CONSOLE_HEADER"get_async_info_ref2 error" );
-			continue;
-		}
+		const auto info = item->get_async_info_ref();
 
 		const char *str = info->info().meta_get( db_name , 0 );
 		if( str == nullptr )
 			continue;
 
-		// partial match
+		// try partial match
+		// -----should convert to lower case first for ascii ?
 		const pfc::string8 s = str;
 		const bool match = s.find_first( x_field ) < s.get_length() ? true : false ;
 		if( match )
