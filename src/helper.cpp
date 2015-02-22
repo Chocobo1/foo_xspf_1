@@ -274,10 +274,10 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		// fetch track info
 		const metadb_handle_ptr track_item = p_data.get_item( i );
 		metadb_info_container::ptr track_info;
-		bool ret = track_item->get_info_ref( track_info );
+		bool ret = track_item->get_async_info_ref( track_info );
 		if( !ret )
 		{
-			console::printf( CONSOLE_HEADER"get_info_ref error" );
+			console::printf( CONSOLE_HEADER"get_async_info_ref error" );
 			continue;
 		}
 
@@ -406,10 +406,10 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const pfc::list_t
 		// get item from db
 		const auto item = list->get_item( i );
 		metadb_info_container::ptr info;
-		bool ret = item->get_info_ref( info );
+		bool ret = item->get_async_info_ref( info );
 		if( !ret )
 		{
-			console::printf( CONSOLE_HEADER"get_info_ref2 error" );
+			console::printf( CONSOLE_HEADER"get_async_info_ref2 error" );
 			continue;
 		}
 
