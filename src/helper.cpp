@@ -209,9 +209,6 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 
 void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const pfc::list_t<metadb_handle_ptr> *list , const t_size c )
 {
-	console::printf( "init size: %d" , list->get_size() );
-
-
 	p_callback->on_progress( ( "track " + std::to_string( c ) ).c_str() );
 	pfc::list_t<metadb_handle_ptr> new_list;
 
@@ -227,9 +224,7 @@ void open_helper_no_location( playlist_loader_callback::ptr p_callback , const t
 	// 4.1.1.2.14.1.1.1.9 trackNum
 	filterFieldHelper( x_track , &new_list , "trackNum" , "TRACKNUMBER" , &new_list );
 
-	console::printf( "final size: %d" , list->get_size() );
-
-	// add the first result to playlist
+	// add result
 	for( t_size i = 0 , max = new_list.get_count() ; i < max ; ++i )
 	{
 		p_callback->on_entry( new_list.get_item( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
