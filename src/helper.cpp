@@ -405,8 +405,7 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const pfc::list_t
 
 		// try partial match
 		// -----should convert to lower case first for ascii ?
-		const pfc::string8 s = str;
-		const bool match = s.find_first( x_field ) < s.get_length() ? true : false ;
+		const bool match = (strstr( str , x_field ) != nullptr) ? true : false;
 		if( match )
 		{
 			tmp_list += item;
