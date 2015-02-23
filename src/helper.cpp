@@ -6,7 +6,50 @@
 static const t_size XMLBASE_LEN = 4;  // 1 string for each playlist.trackList.track.location
 
 
-struct mainThreadTask : public main_thread_callback
+template<class T>
+class myCache
+{
+		struct cacheData
+		{
+			std::string name;
+			T data;
+		};
+
+	public:
+		void setCache( const char *in_name , const T *in_data )
+		{
+			cacheData tmp;
+			tmp.name = in_name;
+			tmp.data = *in_data;
+			cache.push_front( std::move( tmp ) );
+
+			if( cache.size() > CACHE_SIZE )
+				cache.pop_back();
+			return;
+		}
+
+		const T *getCache( const char *in_name )
+		{
+			for( auto i = cache.cbegin() ; i != cache.cend() ; ++i )
+			{
+				if( i->name == in_name )
+				{
+					// move to head
+					cache.splice( cache.begin() , cache , i );
+					return &cache.front().data;
+				}
+			}
+
+			return nullptr;
+		}
+
+	private:
+		static const int CACHE_SIZE = 20;
+		std::list<cacheData> cache;
+};
+
+
+class mainThreadTask : public main_thread_callback
 {
 	public:
 		virtual void callback_run()
@@ -43,8 +86,8 @@ struct mainThreadTask : public main_thread_callback
 
 		std::promise<bool> is_library_enabled;
 
-		pfc::list_t<metadb_handle_ptr> list;
-		std::promise< pfc::list_t<metadb_handle_ptr>* > list_ptr;
+		dbList list;
+		std::promise< dbList * > list_ptr;
 };
 
 
@@ -113,7 +156,8 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 
 	// 4.1.1.2.14.1.1 track
 	t_size counter = 0;
-	pfc::list_t<metadb_handle_ptr> list_cache;  // don't queue CB for every <track>
+	dbList db_list;  // don't queue CB for every <track>
+	myCache < dbList > album_cache;
 	for( auto *x_track = x_tracklist->FirstChildElement( "track" ) ; x_track != nullptr ; x_track = x_track->NextSiblingElement( "track" ) , ++counter )
 	{
 		// track xml:base
@@ -130,7 +174,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 		else
 		{
 			// minimize async calls
-			if( list_cache.get_count() == 0 )
+			if( db_list.get_count() == 0 )
 			{
 				// first time init
 
@@ -154,10 +198,10 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 				auto list_ptr = m_task->list_ptr.get_future();
 
 				m->add_callback( m_task );
-				list_cache.move_from( *( list_ptr.get() ) );
+				db_list.move_from( *( list_ptr.get() ) );
 			}
 
-			open_helper_no_location( p_callback , x_track , &list_cache , counter );
+			open_helper_no_location( p_callback , x_track , &db_list , counter );
 		}
 	}
 
@@ -207,10 +251,10 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	return;
 }
 
-void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const pfc::list_t<metadb_handle_ptr> *list , const t_size c )
+void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *list , const t_size c )
 {
 	p_callback->on_progress( ( "track " + std::to_string( c ) ).c_str() );
-	pfc::list_t<metadb_handle_ptr> new_list;
+	dbList new_list;
 
 	// 4.1.1.2.14.1.1.1.5 album
 	filterFieldHelper( x_track , list , "album" , "ALBUM" , &new_list );
@@ -381,7 +425,7 @@ void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , c
 	return;
 }
 
-void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const pfc::list_t<metadb_handle_ptr> *list , const char *x_name , const char *db_name , pfc::list_t<metadb_handle_ptr> *out )
+void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *list , const char *x_name , const char *db_name , dbList *out )
 {
 	// prepare
 	const auto *x = x_parent->FirstChildElement( x_name );
@@ -392,7 +436,7 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const pfc::list_t
 		return;
 
 	// scan through list
-	pfc::list_t<metadb_handle_ptr> tmp_list;
+	dbList tmp_list;
 	for( t_size i = 0 , max = list->get_count(); i < max ; ++i )
 	{
 		// get item from db
