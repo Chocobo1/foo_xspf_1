@@ -6,49 +6,6 @@
 static const t_size XMLBASE_LEN = 4;  // 1 string for each playlist.trackList.track.location
 
 
-template<class T>
-class myCache
-{
-		struct cacheData
-		{
-			std::string name;
-			T data;
-		};
-
-	public:
-		void setCache( const char *in_name , const T *in_data )
-		{
-			cacheData tmp;
-			tmp.name = in_name;
-			tmp.data = *in_data;
-			cache.push_front( std::move( tmp ) );
-
-			if( cache.size() > CACHE_SIZE )
-				cache.pop_back();
-			return;
-		}
-
-		const T *getCache( const char *in_name )
-		{
-			for( auto i = cache.cbegin() ; i != cache.cend() ; ++i )
-			{
-				if( i->name == in_name )
-				{
-					// move to head
-					cache.splice( cache.begin() , cache , i );
-					return &cache.front().data;
-				}
-			}
-
-			return nullptr;
-		}
-
-	private:
-		static const int CACHE_SIZE = 20;
-		std::list<cacheData> cache;
-};
-
-
 class mainThreadTask : public main_thread_callback
 {
 	public:
@@ -156,7 +113,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 
 	// 4.1.1.2.14.1.1 track
 	t_size counter = 0;
-	dbList db_list;  // don't queue CB for every <track>
+	dbList db_list;  // don't call main thread for every <track>
 	myCache < dbList > album_cache;
 	for( auto *x_track = x_tracklist->FirstChildElement( "track" ) ; x_track != nullptr ; x_track = x_track->NextSiblingElement( "track" ) , ++counter )
 	{
@@ -173,8 +130,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 		}
 		else
 		{
-			// minimize async calls
-			if( db_list.get_count() == 0 )
+			if( db_list.get_count() == 0 )  // minimize async calls
 			{
 				// first time init
 
@@ -201,7 +157,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 				db_list.move_from( *( list_ptr.get() ) );
 			}
 
-			open_helper_no_location( p_callback , x_track , &db_list , counter );
+			open_helper_no_location( p_callback , x_track , &db_list , counter , &album_cache );
 		}
 	}
 
@@ -251,13 +207,13 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	return;
 }
 
-void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *list , const t_size c )
+void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *list , const t_size c , const myCache < dbList > *album_cache )
 {
 	p_callback->on_progress( ( "track " + std::to_string( c ) ).c_str() );
 	dbList new_list;
 
 	// 4.1.1.2.14.1.1.1.5 album
-	filterFieldHelper( x_track , list , "album" , "ALBUM" , &new_list );
+	filterFieldHelper( x_track , list , "album" , "ALBUM" , &new_list , album_cache );
 
 	// 4.1.1.2.14.1.1.1.3 title
 	filterFieldHelper( x_track , &new_list , "title" , "TITLE" , &new_list );
@@ -425,7 +381,7 @@ void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , c
 	return;
 }
 
-void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *list , const char *x_name , const char *db_name , dbList *out )
+void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *list , const char *x_name , const char *db_name , dbList *out , const myCache < dbList > *album_cache )
 {
 	// prepare
 	const auto *x = x_parent->FirstChildElement( x_name );
