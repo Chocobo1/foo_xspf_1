@@ -283,6 +283,9 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 	// for each track
 	for( t_size i = 0 , max = p_data.get_size(); i < max ; ++i )
 	{
+		if( p_abort.is_aborting() )
+			return;
+
 		// fetch track info
 		const metadb_handle_ptr track_item = p_data.get_item( i );
 		const auto track_info = track_item->get_async_info_ref();
