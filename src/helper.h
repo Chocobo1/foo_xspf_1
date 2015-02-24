@@ -39,6 +39,7 @@ class xmlBaseHelper
 		static const t_size XMLBASE_LEN = 4;  // playlist, trackList, track, location
 		T base[XMLBASE_LEN];
 };
+typedef xmlBaseHelper<pfc::string8> xmlBaseImpl;
 
 template<class T>
 class myCache
@@ -52,10 +53,7 @@ class myCache
 	public:
 		void setCache( const char *in_name , const T *in_data )
 		{
-			cacheData tmp;
-			tmp.name = in_name;
-			tmp.data = *in_data;
-			cache.push_front( std::move( tmp ) );
+			cache.emplace_front( { in_name , *in_data } );
 
 			if( cache.size() > CACHE_SIZE )
 				cache.pop_back();
@@ -68,8 +66,7 @@ class myCache
 			{
 				if( i->name == in_name )
 				{
-					// move to head
-					cache.splice( cache.begin() , cache , i );
+					cache.splice( cache.begin() , cache , i );  // move to head
 					return &cache.front().data;
 				}
 			}
@@ -84,7 +81,7 @@ class myCache
 
 
 void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort );
-void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseHelper<pfc::string8> *xml_base );
+void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseImpl *xml_base );
 void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *list , const myCache < dbList > *album_cache );
 void write_helper( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort , const bool w_location );
 

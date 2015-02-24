@@ -67,7 +67,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 		throw exception_io_data();
 	}
 
-	xmlBaseHelper<pfc::string8> xml_base;
+	xmlBaseImpl xml_base;
 
 	// 4.1.1 playlist
 	const auto *x_playlist = x.FirstChildElement( "playlist" );
@@ -173,7 +173,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	return;
 }
 
-void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseHelper<pfc::string8> *xml_base )
+void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseImpl *xml_base )
 {
 	const auto *track_location = x_track->FirstChildElement( "location" );
 
