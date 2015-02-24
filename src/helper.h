@@ -1,6 +1,6 @@
 #pragma once
 
-typedef pfc::list_t < metadb_handle_ptr > dbList;
+typedef pfc::list_t<metadb_handle_ptr> dbList;
 
 
 template<class T>
@@ -87,7 +87,7 @@ class lruCache
 		static const t_size CACHE_SIZE = 100;
 		std::list<cacheData> cache;
 };
-typedef lruCache < dbList > lruCacheImpl;
+typedef lruCache<dbList> lruCacheImpl;
 
 
 void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort );
