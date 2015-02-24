@@ -458,7 +458,7 @@ void pathToUri( const char *in_path , const char *ref_path , pfc::string8 *out )
 
 	// create URI
 	path_str.replace_char( '\\' , '/' );  // note: linux can have '\' in file name
-	*out = urlEncodeUtf8( path_str );
+	*out = std::move(urlEncodeUtf8( path_str ));
 
 	return;
 }
@@ -468,14 +468,14 @@ void uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 b
 	out->reset();
 
 	// add xml:base
-	const pfc::string8 base_path = getXmlBase( base );
+	const pfc::string8 base_path = std::move(getXmlBase( base ));
 	if( !base_path.is_empty() )
 	{
 		*out += base_path;
 	}
 
 	// check "file:" scheme
-	pfc::string8 in_str = urlDecodeUtf8( in_uri );
+	pfc::string8 in_str = std::move(urlDecodeUtf8( in_uri ));
 	const bool is_local = in_str.has_prefix( "file:" );
 	if( is_local )
 	{
