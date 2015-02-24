@@ -54,7 +54,7 @@ class lruCache
 		void set( const char *in_name , const T *in_data )
 		{
 			// find the one
-			for( auto i = cache.cbegin() ; i != cache.cend() ; ++i )
+			for( auto i = cache.cbegin() , end = cache.cend() ; i != end ; ++i )
 			{
 				if( i->name == in_name )
 				{
@@ -71,7 +71,7 @@ class lruCache
 
 		const T *get( const char *in_name )
 		{
-			for( auto i = cache.cbegin() ; i != cache.cend() ; ++i )
+			for( auto i = cache.cbegin() , end = cache.cend() ; i != end ; ++i )
 			{
 				if( i->name == in_name )
 				{
