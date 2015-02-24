@@ -52,10 +52,12 @@ DECLARE_COMPONENT_VERSION
 );
 
 
-// setting
+// settings
 static advconfig_checkbox_factory cfg_write_location( "XSPF playlist write location element" ,
 { 0x40c1b282 , 0xf04a , 0x4a69 , { 0x90 , 0xfe , 0x40 , 0x51 , 0xa0 , 0x3e , 0x1 , 0xa2 } } ,
 advconfig_branch::guid_branch_tagging , 0.0 , true );
+
+// TODO: add compact output
 
 
 const char *xspf::get_extension()

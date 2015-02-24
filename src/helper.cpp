@@ -187,7 +187,7 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 
 	// ONLY HANDLE PLAYABLE FILES OR URLS, LINKING TO ANOTHER PLAYLIST IS NOT SUPPORTED
 	pfc::string8 out_str;
-	uriToPath( track_location->GetText() , p_path , std::move(xml_base->getXmlBase()) , &out_str );
+	uriToPath( track_location->GetText() , p_path , xml_base->getXmlBase() , &out_str );
 	if( !out_str.is_empty() )
 	{
 		p_callback->on_progress( out_str );
@@ -414,7 +414,6 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *lis
 			continue;
 
 		// try partial match
-		// -----should convert to lower case first for ascii ?
 		const bool match = (strstr( str , x_field ) != nullptr) ? true : false;
 		if( match )
 		{
@@ -453,7 +452,7 @@ void pathToUri( const char *in_path , const char *ref_path , pfc::string8 *out )
 
 	// create URI
 	path_str.replace_char( '\\' , '/' );  // note: linux can have '\' in file name
-	*out = std::move(urlEncodeUtf8( path_str ));
+	*out = urlEncodeUtf8( path_str );
 
 	return;
 }
@@ -469,7 +468,7 @@ void uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 b
 	}
 
 	// check "file:" scheme
-	pfc::string8 in_str = std::move(urlDecodeUtf8( in_uri ));
+	pfc::string8 in_str = urlDecodeUtf8( in_uri );
 	const bool is_local = in_str.has_prefix( "file:" );
 	if( is_local )
 	{
