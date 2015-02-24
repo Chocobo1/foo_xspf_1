@@ -210,8 +210,7 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	addInfoHelper( x_track , &f_info , "trackNum" , "TRACKNUMBER" );
 
 	// insert into playlist
-	const t_filestats f_stats = { 0 };
-	p_callback->on_entry_info( f_handle , playlist_loader_callback::entry_user_requested , f_stats , f_info , false );
+	p_callback->on_entry_info( f_handle , playlist_loader_callback::entry_user_requested , filestats_invalid , f_info , false );
 
 	return;
 }
