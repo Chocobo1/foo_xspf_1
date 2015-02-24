@@ -42,7 +42,7 @@ class xmlBaseHelper
 typedef xmlBaseHelper<pfc::string8> xmlBaseImpl;
 
 template<class T>
-class myCache
+class lruCache
 {
 		struct cacheData
 		{
@@ -78,15 +78,16 @@ class myCache
 		static const t_size CACHE_SIZE = 100;
 		std::list<cacheData> cache;
 };
+typedef lruCache < dbList > lruCacheImpl;
 
 
 void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort );
 void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseImpl *xml_base );
-void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *list , const myCache < dbList > *album_cache );
+void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *list , const lruCacheImpl *album_cache );
 void write_helper( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort , const bool w_location );
 
 void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const char *x_name , const char *db_name );
-void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *list , const char *x_name , const char *db_name , dbList *out , const myCache < dbList > *album_cache = nullptr );
+void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *list , const char *x_name , const char *db_name , dbList *out , const lruCacheImpl *album_cache = nullptr );
 
 pfc::string8 pathToUri( const char *in_path , const char *ref_path );
 pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 base_str );
