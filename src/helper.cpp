@@ -2,10 +2,6 @@
 #include "helper.h"
 
 
-#define CONSOLE_HEADER "foo_xspf_1: "
-static const t_size XMLBASE_LEN = 4;  // 1 string for each playlist.trackList.track.location
-
-
 class mainThreadTask : public main_thread_callback
 {
 	public:
@@ -71,7 +67,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 		throw exception_io_data();
 	}
 
-	pfc::string8 xml_base[XMLBASE_LEN];
+	xmlBaseHelper<pfc::string8> xml_base;
 
 	// 4.1.1 playlist
 	const auto *x_playlist = x.FirstChildElement( "playlist" );
@@ -82,7 +78,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	}
 	// playlist xml:base
 	const char *x_playlist_base = x_playlist->Attribute( "xml:base" );
-	setXmlBase( xml_base , 0 , x_playlist_base );
+	xml_base.setXmlBase( 0 , x_playlist_base );
 
 	// 4.1.1.1.1 xmlns
 	const char *x_playlist_ns = x_playlist->Attribute( "xmlns" );
@@ -117,7 +113,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	}
 	// trackList xml:base
 	const char *x_tracklist_base = x_tracklist->Attribute( "xml:base" );
-	setXmlBase( xml_base , 1 , x_tracklist_base );
+	xml_base.setXmlBase( 1 , x_tracklist_base );
 
 	// 4.1.1.2.14.1.1 track
 	t_size counter = 0;
@@ -130,14 +126,14 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 
 		// track xml:base
 		const char *x_track_base = x_track->Attribute( "xml:base" );
-		setXmlBase( xml_base , 2 , x_track_base );
+		xml_base.setXmlBase( 2 , x_track_base );
 
 		// 4.1.1.2.14.1.1.1.1 location
 		const auto *track_location = x_track->FirstChildElement( "location" );
 		if( ( track_location != nullptr ) && ( track_location->GetText() != nullptr ) )
 		{
 			// have location
-			open_helper_location( p_path , p_callback , x_track , xml_base );
+			open_helper_location( p_path , p_callback , x_track , &xml_base );
 		}
 		else
 		{
@@ -177,13 +173,13 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	return;
 }
 
-void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , pfc::string8 xml_base[] )
+void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseHelper<pfc::string8> *xml_base )
 {
 	const auto *track_location = x_track->FirstChildElement( "location" );
 
 	// location xml:base
 	const char *track_location_base = track_location->Attribute( "xml:base" );
-	setXmlBase( xml_base , 3 , track_location_base );
+	xml_base->setXmlBase( 3 , track_location_base );
 
 	// file info variables
 	file_info_impl f_info;
@@ -191,7 +187,7 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 
 	// ONLY HANDLE PLAYABLE FILES OR URLS, LINKING TO ANOTHER PLAYLIST IS NOT SUPPORTED
 	pfc::string8 out_str;
-	uriToPath( track_location->GetText() , p_path , xml_base , &out_str );
+	uriToPath( track_location->GetText() , p_path , std::move(xml_base->getXmlBase()) , &out_str );
 	if( !out_str.is_empty() )
 	{
 		p_callback->on_progress( out_str );
@@ -463,15 +459,14 @@ void pathToUri( const char *in_path , const char *ref_path , pfc::string8 *out )
 	return;
 }
 
-void uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 base[] , pfc::string8 *out )
+void uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 base_str , pfc::string8 *out )
 {
 	out->reset();
 
 	// add xml:base
-	const pfc::string8 base_path = std::move(getXmlBase( base ));
-	if( !base_path.is_empty() )
+	if( !base_str.is_empty() )
 	{
-		*out += base_path;
+		*out += base_str;
 	}
 
 	// check "file:" scheme
@@ -497,35 +492,6 @@ void uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 b
 	*out += in_str;
 
 	return;
-}
-
-
-void setXmlBase( pfc::string8 base[] , const t_size num , const char *val )
-{
-	if( ( num < 0 ) || ( num >= XMLBASE_LEN ) )
-	{
-		console::printf( CONSOLE_HEADER"setXmlBase num error: %d" , num );
-		return;
-	}
-
-	if( val == nullptr )
-	{
-		base[num].reset();
-		return;
-	}
-
-	base[num] = val;
-	return;
-}
-
-pfc::string8 getXmlBase( const pfc::string8 base[] )
-{
-	pfc::string8 out;
-	for( t_size i = 0 ; i < XMLBASE_LEN ; ++i )
-	{
-		out += base[i];
-	}
-	return out;
 }
 
 

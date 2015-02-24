@@ -4,6 +4,43 @@ typedef pfc::list_t < metadb_handle_ptr > dbList;
 
 
 template<class T>
+class xmlBaseHelper
+{
+	public:
+		void setXmlBase( const t_size num , const char *val )
+		{
+			if( ( num < 0 ) || ( num >= XMLBASE_LEN ) )
+			{
+				console::printf( CONSOLE_HEADER"setXmlBase num error: %d" , num );
+				return;
+			}
+
+			if( val == nullptr )
+			{
+				base[num].reset();
+				return;
+			}
+
+			base[num] = val;
+			return;
+		}
+
+		T getXmlBase() const
+		{
+			T out;
+			for( const auto &i : base )
+			{
+				out += i;
+			}
+			return out;
+		}
+
+	private:
+		static const t_size XMLBASE_LEN = 4;  // playlist, trackList, track, location
+		T base[XMLBASE_LEN];
+};
+
+template<class T>
 class myCache
 {
 		struct cacheData
@@ -41,13 +78,13 @@ class myCache
 		}
 
 	private:
-		static const int CACHE_SIZE = 20;
+		static const t_size CACHE_SIZE = 100;
 		std::list<cacheData> cache;
 };
 
 
 void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort );
-void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , pfc::string8 xml_base[] );
+void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseHelper<pfc::string8> *xml_base );
 void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *list , const myCache < dbList > *album_cache );
 void write_helper( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort , const bool w_location );
 
@@ -55,10 +92,7 @@ void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , c
 void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *list , const char *x_name , const char *db_name , dbList *out , const myCache < dbList > *album_cache = nullptr );
 
 void pathToUri( const char *in_path , const char *ref_path , pfc::string8 *out );
-void uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 base[] , pfc::string8 *out );
-
-void setXmlBase( pfc::string8 base[] , const t_size num , const char *val );
-pfc::string8 getXmlBase( const pfc::string8 base[] );
+void uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 base_str , pfc::string8 *out );
 
 pfc::string8 urlEncodeUtf8( const char *in );
 pfc::string8 urlDecodeUtf8( const char *in );
