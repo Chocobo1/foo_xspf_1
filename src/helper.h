@@ -51,16 +51,25 @@ class lruCache
 		};
 
 	public:
-		void setCache( const char *in_name , const T *in_data )
+		void set( const char *in_name , const T *in_data )
 		{
-			cache.emplace_front( { in_name , *in_data } );
+			// find the one
+			for( auto i = cache.cbegin() ; i != cache.cend() ; ++i )
+			{
+				if( i->name == in_name )
+				{
+					cache.splice( cache.begin() , cache , i );  // move to head
+					return;
+				}
+			}
 
+			cache.push_front( { in_name , *in_data } );
 			if( cache.size() > CACHE_SIZE )
 				cache.pop_back();
 			return;
 		}
 
-		const T *getCache( const char *in_name )
+		const T *get( const char *in_name )
 		{
 			for( auto i = cache.cbegin() ; i != cache.cend() ; ++i )
 			{
@@ -83,11 +92,11 @@ typedef lruCache < dbList > lruCacheImpl;
 
 void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort );
 void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseImpl *xml_base );
-void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *list , const lruCacheImpl *album_cache );
+void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *list , lruCacheImpl *album_cache );
 void write_helper( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort , const bool w_location );
 
 void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const char *x_name , const char *db_name );
-void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *list , const char *x_name , const char *db_name , dbList *out , const lruCacheImpl *album_cache = nullptr );
+void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *list , const char *x_name , const char *db_name , dbList *out , lruCacheImpl *album_cache = nullptr );
 
 pfc::string8 pathToUri( const char *in_path , const char *ref_path );
 pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 base_str );

@@ -118,7 +118,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	// 4.1.1.2.14.1.1 track
 	t_size counter = 0;
 	dbList db_list;  // don't call main thread for every <track>
-	lruCacheImpl album_cache;
+	lruCacheImpl lru_cache;
 	for( auto *x_track = x_tracklist->FirstChildElement( "track" ) ; x_track != nullptr ; x_track = x_track->NextSiblingElement( "track" ) )
 	{
 		if( p_abort.is_aborting() )
@@ -166,7 +166,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 				db_list.move_from( *( list_ptr.get() ) );
 			}
 
-			open_helper_no_location( p_callback , x_track , &db_list , &album_cache );
+			open_helper_no_location( p_callback , x_track , &db_list , &lru_cache );
 		}
 	}
 
@@ -214,12 +214,12 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	return;
 }
 
-void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *list , const lruCacheImpl *album_cache )
+void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *list , lruCacheImpl *lru_cache )
 {
 	dbList new_list;
 
 	// 4.1.1.2.14.1.1.1.5 album
-	filterFieldHelper( x_track , list , "album" , "ALBUM" , &new_list , album_cache );
+	filterFieldHelper( x_track , list , "album" , "ALBUM" , &new_list , lru_cache );
 
 	// 4.1.1.2.14.1.1.1.3 title
 	filterFieldHelper( x_track , &new_list , "title" , "TITLE" , &new_list );
@@ -389,7 +389,7 @@ void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , c
 	return;
 }
 
-void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *list , const char *x_name , const char *db_name , dbList *out , const lruCacheImpl *album_cache )
+void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_list , const char *x_name , const char *db_name , dbList *out , lruCacheImpl *lru_cache )
 {
 	// prepare
 	const auto *x = x_parent->FirstChildElement( x_name );
@@ -398,6 +398,17 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *lis
 	const char *x_field = x->GetText();
 	if( x_field == nullptr )
 		return;
+
+	// use cache
+	const dbList *list = in_list;
+	if( lru_cache != nullptr )
+	{
+		const dbList *t = lru_cache->get( x_field );
+		if( t != nullptr )
+		{
+			list = t;
+		}
+	}
 
 	// scan through list
 	dbList tmp_list;
@@ -417,6 +428,12 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *lis
 		{
 			tmp_list += item;
 		}
+	}
+
+	// use cache
+	if( lru_cache != nullptr )
+	{
+		lru_cache->set( x_field , &tmp_list );
 	}
 
 	out->move_from( tmp_list );
