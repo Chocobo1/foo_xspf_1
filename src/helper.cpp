@@ -52,8 +52,16 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 {
 	// load file
 	pfc::string8 in_file;
-	p_file->seek( 0 , p_abort );  // required, said SDK
-	p_file->read_string_raw( in_file , p_abort );
+	try
+	{
+		p_file->seek( 0 , p_abort );  // required, said SDK
+		p_file->read_string_raw( in_file , p_abort );
+	}
+	catch(...)
+	{
+		console::printf( CONSOLE_HEADER"exception in seek() or read_string_raw()" );
+		return;
+	}
 
 	tinyxml2::XMLDocument x;
 	auto ret = x.Parse( in_file );
@@ -117,6 +125,9 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	myCache < dbList > album_cache;
 	for( auto *x_track = x_tracklist->FirstChildElement( "track" ) ; x_track != nullptr ; x_track = x_track->NextSiblingElement( "track" ) )
 	{
+		if( p_abort.is_aborting() )
+			return;
+
 		// track xml:base
 		const char *x_track_base = x_track->Attribute( "xml:base" );
 		setXmlBase( xml_base , 2 , x_track_base );
