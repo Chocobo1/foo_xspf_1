@@ -57,9 +57,9 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 		p_file->seek( 0 , p_abort );  // required, said SDK
 		p_file->read_string_raw( in_file , p_abort );
 	}
-	catch( std::exception& e )
+	catch( ... )
 	{
-		console::printf( CONSOLE_HEADER"seek(), read_string_raw(): %s" , e.what() );
+		console::printf( CONSOLE_HEADER"exception from seek(), read_string_raw()" );
 		throw;
 	}
 
