@@ -214,26 +214,26 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	return;
 }
 
-void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *list , lruCacheImpl *lru_cache )
+void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheImpl *lru_cache )
 {
-	dbList new_list;
+	dbList list;
 
 	// 4.1.1.2.14.1.1.1.5 album
-	filterFieldHelper( x_track , list , "album" , "ALBUM" , &new_list , lru_cache );
+	filterFieldHelper( x_track , in_list , "album" , "ALBUM" , &list , lru_cache );
 
 	// 4.1.1.2.14.1.1.1.3 title
-	filterFieldHelper( x_track , &new_list , "title" , "TITLE" , &new_list );
+	filterFieldHelper( x_track , &list , "title" , "TITLE" , &list );
 
 	// 4.1.1.2.14.1.1.1.4 creator
-	filterFieldHelper( x_track , &new_list , "creator" , "ARTIST" , &new_list );
+	filterFieldHelper( x_track , &list , "creator" , "ARTIST" , &list );
 
 	// 4.1.1.2.14.1.1.1.9 trackNum
-	filterFieldHelper( x_track , &new_list , "trackNum" , "TRACKNUMBER" , &new_list );
+	filterFieldHelper( x_track , &list , "trackNum" , "TRACKNUMBER" , &list );
 
 	// add result
-	for( t_size i = 0 , max = new_list.get_count() ; i < max ; ++i )
+	for( t_size i = 0 , max = list.get_count() ; i < max ; ++i )
 	{
-		p_callback->on_entry( new_list.get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
+		p_callback->on_entry( list.get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
 		if( true )
 			break;
 	}
