@@ -115,7 +115,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	t_size counter = 0;
 	dbList db_list;  // don't call main thread for every <track>
 	myCache < dbList > album_cache;
-	for( auto *x_track = x_tracklist->FirstChildElement( "track" ) ; x_track != nullptr ; x_track = x_track->NextSiblingElement( "track" ) , ++counter )
+	for( auto *x_track = x_tracklist->FirstChildElement( "track" ) ; x_track != nullptr ; x_track = x_track->NextSiblingElement( "track" ) )
 	{
 		// track xml:base
 		const char *x_track_base = x_track->Attribute( "xml:base" );
@@ -130,6 +130,8 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 		}
 		else
 		{
+			p_callback->on_progress( ( "track " + std::to_string( counter++ ) ).c_str() );
+
 			if( db_list.get_count() == 0 )  // minimize async calls
 			{
 				// first time init
@@ -157,7 +159,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 				db_list.move_from( *( list_ptr.get() ) );
 			}
 
-			open_helper_no_location( p_callback , x_track , &db_list , counter , &album_cache );
+			open_helper_no_location( p_callback , x_track , &db_list , &album_cache );
 		}
 	}
 
@@ -207,9 +209,8 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	return;
 }
 
-void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *list , const t_size c , const myCache < dbList > *album_cache )
+void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *list , const myCache < dbList > *album_cache )
 {
-	p_callback->on_progress( ( "track " + std::to_string( c ) ).c_str() );
 	dbList new_list;
 
 	// 4.1.1.2.14.1.1.1.5 album
