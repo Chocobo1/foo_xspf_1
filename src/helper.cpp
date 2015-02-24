@@ -186,8 +186,7 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	metadb_handle_ptr f_handle;
 
 	// ONLY HANDLE PLAYABLE FILES OR URLS, LINKING TO ANOTHER PLAYLIST IS NOT SUPPORTED
-	pfc::string8 out_str;
-	uriToPath( track_location->GetText() , p_path , xml_base->getXmlBase() , &out_str );
+	const pfc::string8 out_str = uriToPath( track_location->GetText() , p_path , xml_base->getXmlBase() );
 	if( !out_str.is_empty() )
 	{
 		p_callback->on_progress( out_str );
@@ -293,8 +292,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		if( w_location )
 		{
 			const char *item_path = track_item->get_path();
-			pfc::string8 track_path;
-			pathToUri( item_path , p_path , &track_path );
+			const pfc::string8 track_path = pathToUri( item_path , p_path );
 			if( !track_path.is_empty() )
 			{
 				auto track_location = x.NewElement( "location" );
@@ -426,9 +424,9 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *lis
 }
 
 
-void pathToUri( const char *in_path , const char *ref_path , pfc::string8 *out )
+pfc::string8 pathToUri( const char *in_path , const char *ref_path )
 {
-	out->reset();
+	pfc::string8 out;
 
 	pfc::string8 path_str = in_path;
 	if( !filesystem::g_is_remote_safe( in_path ) )
@@ -452,19 +450,19 @@ void pathToUri( const char *in_path , const char *ref_path , pfc::string8 *out )
 
 	// create URI
 	path_str.replace_char( '\\' , '/' );  // note: linux can have '\' in file name
-	*out = urlEncodeUtf8( path_str );
+	out = urlEncodeUtf8( path_str );
 
-	return;
+	return out;
 }
 
-void uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 base_str , pfc::string8 *out )
+pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 base_str )
 {
-	out->reset();
+	pfc::string8 out;
 
 	// add xml:base
 	if( !base_str.is_empty() )
 	{
-		*out += base_str;
+		out += base_str;
 	}
 
 	// check "file:" scheme
@@ -484,12 +482,12 @@ void uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 b
 			pfc::string8 par_path = ref_path;
 			par_path.truncate_to_parent_path();
 			par_path.fix_dir_separator();
-			*out += par_path;
+			out += par_path;
 		}
 	}
-	*out += in_str;
+	out += in_str;
 
-	return;
+	return out;
 }
 
 

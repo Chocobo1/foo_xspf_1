@@ -32,7 +32,7 @@ class xmlBaseHelper
 			{
 				out += i;
 			}
-			return out;
+			return out;  // RVO kicks in
 		}
 
 	private:
@@ -91,8 +91,8 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const char *x_name , const char *db_name );
 void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *list , const char *x_name , const char *db_name , dbList *out , const myCache < dbList > *album_cache = nullptr );
 
-void pathToUri( const char *in_path , const char *ref_path , pfc::string8 *out );
-void uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 base_str , pfc::string8 *out );
+pfc::string8 pathToUri( const char *in_path , const char *ref_path );
+pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 base_str );
 
 pfc::string8 urlEncodeUtf8( const char *in );
 pfc::string8 urlDecodeUtf8( const char *in );
