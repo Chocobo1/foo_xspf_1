@@ -253,11 +253,10 @@ void open_helper_no_location( playlist_loader_callback::ptr p_callback , const t
 	}
 
 	// add result
-	for( t_size i = 0 , max = list.get_count() ; i < max ; ++i )
+	const t_size max = ( cfg_read_mulitple_match ? list.get_count() : pfc::min_t<t_size>( 1 , list.get_count() ) );
+	for( t_size i = 0 ; i < max ; ++i )
 	{
 		p_callback->on_entry( list.get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
-		if( true )
-			break;
 	}
 
 	return;
@@ -448,11 +447,11 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_
 		if( str == nullptr )
 			continue;
 
-		// try exact match, and put it at head
+		// try exact match
 		const bool e_match = ( strcmp( str , x_field ) == 0 ) ? true : false;
 		if( e_match )
 		{
-			tmp_list.insert_item( item , 0 );
+			tmp_list.insert_item( item , 0 );  // put it at head
 			continue;
 		}
 
@@ -464,7 +463,7 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_
 		}
 	}
 
-	// use cache
+	// update cache
 	if( lru_cache != nullptr && list == in_list )
 	{
 		// entry not in cache
