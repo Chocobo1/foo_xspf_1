@@ -37,10 +37,6 @@ guid_branch_read , 1 , false );
 const GUID guid_branch_write = { 0xf11e77ca , 0xf764 , 0x4564 , { 0xaf , 0xd8 , 0x0c , 0x58 , 0xa1 , 0xf0 , 0xd3 , 0x09 } };
 const advconfig_branch_factory cfg_branch_write( "Write" , guid_branch_write , guid_xspf_branch , 0.0 );
 
-const advconfig_checkbox_factory cfg_write_compact( "Compact, playlist is created with only required whitespace and newlines" ,
-{ 0xacd47ae3 , 0xc38 , 0x441d , { 0xac , 0xcf , 0x78 , 0x3b , 0x73 , 0x70 , 0xe4 , 0xe2 } } ,
-guid_branch_write , -1 , false );
-
 const advconfig_checkbox_factory cfg_write_date( "<date>" ,
 { 0x40c1b282 , 0xf04a , 0x4a69 , { 0x90 , 0xfe , 0x40 , 0x51 , 0xa0 , 0x3e , 0x01 , 0xa2 } } ,
 guid_branch_write , 0.0 , false );
@@ -72,3 +68,7 @@ guid_branch_write , 0.0 , true );
 const advconfig_checkbox_factory cfg_write_duration( "<duration>" ,
 { 0xec0b5a32 , 0x120a , 0x4526 , { 0x89 , 0xa2 , 0x9e , 0xa , 0x51 , 0x1f , 0x54 , 0x55 } } ,
 guid_branch_write , 0.0 , false );
+
+const advconfig_checkbox_factory cfg_write_compact( "Compact output" ,
+{ 0xacd47ae3 , 0xc38 , 0x441d , { 0xac , 0xcf , 0x78 , 0x3b , 0x73 , 0x70 , 0xe4 , 0xe2 } } ,
+guid_branch_write , 1 , false );
