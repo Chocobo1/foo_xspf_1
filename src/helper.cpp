@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "helper.h"
+#include "settings.h"
 
 
 class mainThreadTask : public main_thread_callback
@@ -241,7 +242,7 @@ void open_helper_no_location( playlist_loader_callback::ptr p_callback , const t
 	return;
 }
 
-void write_helper( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort , const writeSettings *s )
+void write_helper( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort )
 {
 	// new xml document
 	tinyxml2::XMLDocument x;
@@ -258,7 +259,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 	x_playlist->SetAttribute( "xmlns" , "http://xspf.org/ns/0/" );
 
 	// 4.1.1.2.8 date, XML schema dateTime
-	if( s->date )
+	if( cfg_write_date )
 	{
 		const time_t now = time( NULL );
 		char time_buf[24] = { 0 };
@@ -290,7 +291,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		x_tracklist->InsertEndChild( x_track );
 
 		// 4.1.1.2.14.1.1.1.1 location
-		if( s->location )
+		if( cfg_write_location )
 		{
 			const char *item_path = track_item->get_path();
 			const pfc::string8 track_path = pathToUri( item_path , p_path );
@@ -303,7 +304,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		}
 
 		// 4.1.1.2.14.1.1.1.3 title
-		if( s->title && track_info->info().meta_exists( "TITLE" ) )
+		if( cfg_write_title && track_info->info().meta_exists( "TITLE" ) )
 		{
 			const char *str = track_info->info().meta_get( "TITLE" , 0 );
 			auto track_title = x.NewElement( "title" );
@@ -312,7 +313,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		}
 
 		// 4.1.1.2.14.1.1.1.4 creator
-		if( s->creator && track_info->info().meta_exists( "ARTIST" ) )
+		if( cfg_write_creator && track_info->info().meta_exists( "ARTIST" ) )
 		{
 			const char *str = track_info->info().meta_get( "ARTIST" , 0 );
 			auto track_creator = x.NewElement( "creator" );
@@ -321,7 +322,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		}
 
 		// 4.1.1.2.14.1.1.1.5 annotation
-		if( s->annotation && track_info->info().meta_exists( "COMMENT" ) )
+		if( cfg_write_annotation && track_info->info().meta_exists( "COMMENT" ) )
 		{
 			const char *str = track_info->info().meta_get( "COMMENT" , 0 );
 			auto track_annotation = x.NewElement( "annotation" );
@@ -330,7 +331,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		}
 
 		// 4.1.1.2.14.1.1.1.8 album
-		if( s->album && track_info->info().meta_exists( "ALBUM" ) )
+		if( cfg_write_album && track_info->info().meta_exists( "ALBUM" ) )
 		{
 			const char *str = track_info->info().meta_get( "ALBUM" , 0 );
 			auto track_album = x.NewElement( "album" );
@@ -339,7 +340,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		}
 
 		// 4.1.1.2.14.1.1.1.9 trackNum
-		if( s->tracknum && track_info->info().meta_exists( "TRACKNUMBER" ) )
+		if( cfg_write_tracknum && track_info->info().meta_exists( "TRACKNUMBER" ) )
 		{
 			const char *str = track_info->info().meta_get( "TRACKNUMBER" , 0 );
 			const long int num = strtol( str , NULL , 10 );
@@ -352,7 +353,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		}
 
 		// 4.1.1.2.14.1.1.1.10 duration, in MILLISECONDS!
-		if( s->duration ) 
+		if( cfg_write_duration )
 		{
 			const double track_len = track_item->get_length() * 1000;
 			if( track_len > 0 )
@@ -365,7 +366,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 	}
 
 	// output
-	tinyxml2::XMLPrinter x_printer(nullptr, s->compact);
+	tinyxml2::XMLPrinter x_printer( nullptr , cfg_write_compact );
 	x.Print( &x_printer );
 	try
 	{

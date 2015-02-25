@@ -87,6 +87,7 @@
   <ItemGroup>
     <ClInclude Include="main.h" />
     <ClInclude Include="helper.h" />
+    <ClInclude Include="settings.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
