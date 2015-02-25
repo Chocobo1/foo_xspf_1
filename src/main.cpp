@@ -85,13 +85,23 @@ bool xspf::can_write()
 
 void xspf::open( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort )
 {
+	pfc::hires_timer t;
+	t.start();
+
 	open_helper( p_path , p_file , p_callback , p_abort );
+
+	console::printf( CONSOLE_HEADER"Read time: %s" , t.queryString().toString() );
 	return;
 }
 
 void xspf::write( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort )
 {
+	pfc::hires_timer t;
+	t.start();
+
 	write_helper( p_path , p_file , p_data , p_abort , cfg_write_location );
+
+	console::printf( CONSOLE_HEADER"Write time: %s" , t.queryString().toString() );
 	return;
 }
 
