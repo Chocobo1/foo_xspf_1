@@ -131,7 +131,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 
 		// 4.1.1.2.14.1.1.1.1 location
 		const auto *track_location = x_track->FirstChildElement( "location" );
-		if( ( track_location != nullptr ) && ( track_location->GetText() != nullptr ) )
+		if( !cfg_read_no_location && ( track_location != nullptr ) && ( track_location->GetText() != nullptr ) )
 		{
 			// have location
 			open_helper_location( p_path , p_callback , x_track , &xml_base );
@@ -195,19 +195,23 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	}
 
 	// 4.1.1.2.14.1.1.1.3 title
-	addInfoHelper( x_track , &f_info , "title" , "TITLE" );
+	if( !cfg_read_no_title )
+		addInfoHelper( x_track , &f_info , "title" , "TITLE" );
 
 	// 4.1.1.2.14.1.1.1.4 creator
-	addInfoHelper( x_track , &f_info , "creator" , "ARTIST" );
+	if( !cfg_read_no_creator )
+		addInfoHelper( x_track , &f_info , "creator" , "ARTIST" );
 
 	// 4.1.1.2.14.1.1.1.5 annotation
 	addInfoHelper( x_track , &f_info , "annotation" , "COMMENT" );
 
 	// 4.1.1.2.14.1.1.1.5 album
-	addInfoHelper( x_track , &f_info , "album" , "ALBUM" );
+	if( !cfg_read_no_album )
+		addInfoHelper( x_track , &f_info , "album" , "ALBUM" );
 
 	// 4.1.1.2.14.1.1.1.9 trackNum
-	addInfoHelper( x_track , &f_info , "trackNum" , "TRACKNUMBER" );
+	if( !cfg_read_no_tracknum )
+		addInfoHelper( x_track , &f_info , "trackNum" , "TRACKNUMBER" );
 
 	// insert into playlist
 	p_callback->on_entry_info( f_handle , playlist_loader_callback::entry_user_requested , filestats_invalid , f_info , false );
@@ -218,18 +222,35 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheImpl *lru_cache )
 {
 	dbList list;
+	bool first = true;
 
 	// 4.1.1.2.14.1.1.1.5 album
-	filterFieldHelper( x_track , in_list , "album" , "ALBUM" , &list , lru_cache );
+	if( !cfg_read_no_album )
+	{
+		filterFieldHelper( x_track , ( first ? in_list : &list ) , "album" , "ALBUM" , &list , lru_cache );
+		first = false;
+	}
 
 	// 4.1.1.2.14.1.1.1.3 title
-	filterFieldHelper( x_track , &list , "title" , "TITLE" , &list );
+	if( !cfg_read_no_title )
+	{
+		filterFieldHelper( x_track , ( first ? in_list : &list ) , "title" , "TITLE" , &list );
+		first = false;
+	}
 
 	// 4.1.1.2.14.1.1.1.4 creator
-	filterFieldHelper( x_track , &list , "creator" , "ARTIST" , &list );
+	if( !cfg_read_no_creator )
+	{
+		filterFieldHelper( x_track , ( first ? in_list : &list ) , "creator" , "ARTIST" , &list );
+		first = false;
+	}
 
 	// 4.1.1.2.14.1.1.1.9 trackNum
-	filterFieldHelper( x_track , &list , "trackNum" , "TRACKNUMBER" , &list );
+	if( !cfg_read_no_tracknum )
+	{
+		filterFieldHelper( x_track , ( first ? in_list : &list ) , "trackNum" , "TRACKNUMBER" , &list );
+		first = false;
+	}
 
 	// add result
 	for( t_size i = 0 , max = list.get_count() ; i < max ; ++i )
@@ -427,9 +448,17 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_
 		if( str == nullptr )
 			continue;
 
+		// try exact match, and put it at head
+		const bool e_match = ( strcmp( str , x_field ) == 0 ) ? true : false;
+		if( e_match )
+		{
+			tmp_list.insert_item( item , 0 );
+			continue;
+		}
+
 		// try partial match
-		const bool match = (strstr( str , x_field ) != nullptr) ? true : false;
-		if( match )
+		const bool p_match = ( strstr( str , x_field ) != nullptr ) ? true : false;
+		if( p_match )
 		{
 			tmp_list += item;
 		}

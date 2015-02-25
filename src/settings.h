@@ -4,9 +4,33 @@
 const GUID guid_xspf_branch = { 0xd544a73a , 0xc272 , 0x49b9 , { 0xba , 0xaa , 0x22 , 0x49 , 0x62 , 0x33 , 0x6c , 0xc6 } };
 const advconfig_branch_factory cfg_xspf_branch( "XSPF playlist" , guid_xspf_branch , advconfig_branch::guid_branch_tools , 0.0 );
 
-//const GUID guid_branch_read = { 0x85ac082d , 0x1117 , 0x4d9e , { 0xaa , 0x18 , 0xa9 , 0x3d , 0xba , 0xd3 , 0xeb , 0x45 } };
-//const advconfig_branch_factory cfg_branch_read( "Read" , guid_branch_read , guid_xspf_branch , 0.0 );
 
+// read
+const GUID guid_branch_read = { 0x85ac082d , 0x1117 , 0x4d9e , { 0xaa , 0x18 , 0xa9 , 0x3d , 0xba , 0xd3 , 0xeb , 0x45 } };
+const advconfig_branch_factory cfg_branch_read( "Read" , guid_branch_read , guid_xspf_branch , 0.0 );
+
+const advconfig_checkbox_factory cfg_read_no_location( "Ignore <location>" ,
+{ 0x59aa57db , 0xa2a3 , 0x45d3 , { 0xbc , 0x2 , 0xc0 , 0x9 , 0x69 , 0xc8 , 0x7b , 0xf7 } },
+guid_branch_read , 0.0 , false );
+
+const advconfig_checkbox_factory cfg_read_no_title( "Ignore <title>" ,
+{ 0x59589ffd , 0xf982 , 0x43d7 , { 0xae , 0x5e , 0xee , 0xda , 0xc1 , 0x3 , 0xe , 0xf8 } },
+guid_branch_read , 0.0 , false );
+
+const advconfig_checkbox_factory cfg_read_no_creator( "Ignore <creator>" ,
+{ 0xd6d470ce , 0xafd9 , 0x4201 , { 0xb9 , 0x73 , 0x84 , 0x5a , 0x4f , 0xf8 , 0xa6 , 0xa3 } },
+guid_branch_read , 0.0 , false );
+
+const advconfig_checkbox_factory cfg_read_no_album( "Ignore <album>" ,
+{ 0x6bc14e12 , 0x233e , 0x4b21 , { 0x93 , 0x4c , 0xeb , 0x97 , 0x94 , 0xf8 , 0x85 , 0x4d } },
+guid_branch_read , 0.0 , false );
+
+const advconfig_checkbox_factory cfg_read_no_tracknum( "Ignore <trackNum>" ,
+{ 0xe1d75cda , 0xe4d9 , 0x4cf9 , { 0x93 , 0x33 , 0xf1 , 0x1c , 0x74 , 0x43 , 0x8e , 0x94 } },
+guid_branch_read , 0.0 , false );
+
+
+// write
 const GUID guid_branch_write = { 0xf11e77ca , 0xf764 , 0x4564 , { 0xaf , 0xd8 , 0x0c , 0x58 , 0xa1 , 0xf0 , 0xd3 , 0x09 } };
 const advconfig_branch_factory cfg_branch_write( "Write" , guid_branch_write , guid_xspf_branch , 0.0 );
 
