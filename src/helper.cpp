@@ -241,7 +241,7 @@ void open_helper_no_location( playlist_loader_callback::ptr p_callback , const t
 	return;
 }
 
-void write_helper( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort , const bool w_location )
+void write_helper( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort , const writeSettings *s )
 {
 	// new xml document
 	tinyxml2::XMLDocument x;
@@ -257,18 +257,19 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 	x_playlist->SetAttribute( "version" , 1 );
 	x_playlist->SetAttribute( "xmlns" , "http://xspf.org/ns/0/" );
 
-	/*
 	// 4.1.1.2.8 date,  XML schema dateTime
-	const time_t now = time( NULL );
-	char time_buf[24] = { 0 };
-	struct tm tmp_tm = { 0 };
-	gmtime_s( &tmp_tm , &now );
-	strftime( time_buf , ( sizeof( time_buf ) - 1 ) , "%Y-%m-%dT%H:%M:%SZ" , &tmp_tm );
+	if( s->date )
+	{
+		const time_t now = time( NULL );
+		char time_buf[24] = { 0 };
+		struct tm tmp_tm = { 0 };
+		gmtime_s( &tmp_tm , &now );
+		strftime( time_buf , ( sizeof( time_buf ) - 1 ) , "%Y-%m-%dT%H:%M:%SZ" , &tmp_tm );
 
-	auto x_date = x.NewElement( "date" );
-	x_playlist->InsertEndChild( x_date );
-	x_date->SetText( time_buf );
-	*/
+		auto x_date = x.NewElement( "date" );
+		x_playlist->InsertEndChild( x_date );
+		x_date->SetText( time_buf );
+	}
 
 	// 4.1.1.2.14 trackList
 	auto x_tracklist = x.NewElement( "trackList" );
@@ -289,7 +290,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		x_tracklist->InsertEndChild( x_track );
 
 		// 4.1.1.2.14.1.1.1.1 location
-		if( w_location )
+		if( s->location )
 		{
 			const char *item_path = track_item->get_path();
 			const pfc::string8 track_path = pathToUri( item_path , p_path );
@@ -302,7 +303,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		}
 
 		// 4.1.1.2.14.1.1.1.3 title
-		if( track_info->info().meta_exists( "TITLE" ) )
+		if( s->title && track_info->info().meta_exists( "TITLE" ) )
 		{
 			const char *str = track_info->info().meta_get( "TITLE" , 0 );
 			auto track_title = x.NewElement( "title" );
@@ -311,7 +312,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		}
 
 		// 4.1.1.2.14.1.1.1.4 creator
-		if( track_info->info().meta_exists( "ARTIST" ) )
+		if( s->creator && track_info->info().meta_exists( "ARTIST" ) )
 		{
 			const char *str = track_info->info().meta_get( "ARTIST" , 0 );
 			auto track_creator = x.NewElement( "creator" );
@@ -320,7 +321,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		}
 
 		// 4.1.1.2.14.1.1.1.5 annotation
-		if( track_info->info().meta_exists( "COMMENT" ) )
+		if( s->annotation && track_info->info().meta_exists( "COMMENT" ) )
 		{
 			const char *str = track_info->info().meta_get( "COMMENT" , 0 );
 			auto track_annotation = x.NewElement( "annotation" );
@@ -329,7 +330,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		}
 
 		// 4.1.1.2.14.1.1.1.8 album
-		if( track_info->info().meta_exists( "ALBUM" ) )
+		if( s->album && track_info->info().meta_exists( "ALBUM" ) )
 		{
 			const char *str = track_info->info().meta_get( "ALBUM" , 0 );
 			auto track_album = x.NewElement( "album" );
@@ -338,7 +339,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		}
 
 		// 4.1.1.2.14.1.1.1.9 trackNum
-		if( track_info->info().meta_exists( "TRACKNUMBER" ) )
+		if( s->tracknum && track_info->info().meta_exists( "TRACKNUMBER" ) )
 		{
 			const char *str = track_info->info().meta_get( "TRACKNUMBER" , 0 );
 			const long int num = strtol( str , NULL , 10 );
@@ -351,17 +352,20 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		}
 
 		// 4.1.1.2.14.1.1.1.10 duration, in MILLISECONDS!
-		const double track_len = track_item->get_length() * 1000;
-		if( track_len > 0 )
+		if( s->duration ) 
 		{
-			auto track_duration = x.NewElement( "duration" );
-			x_track->InsertEndChild( track_duration );
-			track_duration->SetText( ( t_size ) track_len );
+			const double track_len = track_item->get_length() * 1000;
+			if( track_len > 0 )
+			{
+				auto track_duration = x.NewElement( "duration" );
+				x_track->InsertEndChild( track_duration );
+				track_duration->SetText( ( t_size ) track_len );
+			}
 		}
 	}
 
 	// output
-	tinyxml2::XMLPrinter x_printer;
+	tinyxml2::XMLPrinter x_printer(nullptr, s->compact);
 	x.Print( &x_printer );
 	try
 	{
