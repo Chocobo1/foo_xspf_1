@@ -507,14 +507,14 @@ pfc::string8 pathToUri( const char *in_path , const char *ref_path )
 	return out;
 }
 
-pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 base_str )
+pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 xbase_str )
 {
 	pfc::string8 out;
 
 	// add xml:base
-	if( !base_str.is_empty() )
+	if( !xbase_str.is_empty() )
 	{
-		out += base_str;
+		out += xbase_str;
 	}
 
 	// check "file:" scheme

@@ -98,7 +98,7 @@ void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , c
 void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_list , const char *x_name , const char *db_name , dbList *out , lruCacheImpl *lru_cache = nullptr );
 
 pfc::string8 pathToUri( const char *in_path , const char *ref_path );
-pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 base_str );
+pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 xbase_str );
 
 pfc::string8 urlEncodeUtf8( const char *in );
 pfc::string8 urlDecodeUtf8( const char *in );
