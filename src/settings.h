@@ -1,5 +1,34 @@
-#pragma once
+/*
+Copyright (c) 2015, Mike Tzou
+All rights reserved.
 
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation
+and/or other materials provided with the distribution.
+
+* Neither the name of foo_xspf_1 nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+#pragma once
 
 const GUID guid_xspf_branch = { 0xd544a73a , 0xc272 , 0x49b9 , { 0xba , 0xaa , 0x22 , 0x49 , 0x62 , 0x33 , 0x6c , 0xc6 } };
 const advconfig_branch_factory cfg_xspf_branch( "XSPF playlist" , guid_xspf_branch , advconfig_branch::guid_branch_tools , 0.0 );
@@ -55,7 +84,7 @@ guid_branch_write , 0.0 , true );
 
 const advconfig_checkbox_factory cfg_write_annotation( "<annotation>" ,
 { 0x715e6c31 , 0xeaaa , 0x4415 , { 0xbd , 0x81 , 0x8c , 0xfb , 0xfc , 0x6b , 0xd , 0x9b } } ,
-guid_branch_write , 0.0 , true );
+guid_branch_write , 0.0 , false );
 
 const advconfig_checkbox_factory cfg_write_album( "<album>" ,
 { 0x79ded13f , 0x6924 , 0x489a , { 0xa7 , 0x2a , 0xed , 0x18 , 0xa0 , 0x59 , 0x30 , 0x58 } } ,
