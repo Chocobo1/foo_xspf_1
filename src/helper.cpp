@@ -131,7 +131,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 
 		// 4.1.1.2.14.1.1.1.1 location
 		const auto *track_location = x_track->FirstChildElement( "location" );
-		if( !cfg_read_no_location && ( track_location != nullptr ) && ( track_location->GetText() != nullptr ) )
+		if( cfg_read_no_location && ( track_location != nullptr ) && ( track_location->GetText() != nullptr ) )
 		{
 			// have location
 			open_helper_location( p_path , p_callback , x_track , &xml_base );
@@ -196,22 +196,22 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	}
 
 	// 4.1.1.2.14.1.1.1.3 title
-	if( !cfg_read_no_title )
+	if( cfg_read_no_title )
 		addInfoHelper( x_track , &f_info , "title" , "TITLE" );
 
 	// 4.1.1.2.14.1.1.1.4 creator
-	if( !cfg_read_no_creator )
+	if( cfg_read_no_creator )
 		addInfoHelper( x_track , &f_info , "creator" , "ARTIST" );
 
 	// 4.1.1.2.14.1.1.1.5 annotation
 	addInfoHelper( x_track , &f_info , "annotation" , "COMMENT" );
 
 	// 4.1.1.2.14.1.1.1.5 album
-	if( !cfg_read_no_album )
+	if( cfg_read_no_album )
 		addInfoHelper( x_track , &f_info , "album" , "ALBUM" );
 
 	// 4.1.1.2.14.1.1.1.9 trackNum
-	if( !cfg_read_no_tracknum )
+	if( cfg_read_no_tracknum )
 		addInfoHelper( x_track , &f_info , "trackNum" , "TRACKNUMBER" );
 
 	// insert into playlist
@@ -226,28 +226,28 @@ void open_helper_no_location( playlist_loader_callback::ptr p_callback , const t
 	bool first = true;
 
 	// 4.1.1.2.14.1.1.1.5 album
-	if( !cfg_read_no_album )
+	if( cfg_read_no_album )
 	{
 		filterFieldHelper( x_track , ( first ? in_list : &list ) , "album" , "ALBUM" , &list , lru_cache );
 		first = false;
 	}
 
 	// 4.1.1.2.14.1.1.1.3 title
-	if( !cfg_read_no_title )
+	if( cfg_read_no_title )
 	{
 		filterFieldHelper( x_track , ( first ? in_list : &list ) , "title" , "TITLE" , &list );
 		first = false;
 	}
 
 	// 4.1.1.2.14.1.1.1.4 creator
-	if( !cfg_read_no_creator )
+	if( cfg_read_no_creator )
 	{
 		filterFieldHelper( x_track , ( first ? in_list : &list ) , "creator" , "ARTIST" , &list );
 		first = false;
 	}
 
 	// 4.1.1.2.14.1.1.1.9 trackNum
-	if( !cfg_read_no_tracknum )
+	if( cfg_read_no_tracknum )
 	{
 		filterFieldHelper( x_track , ( first ? in_list : &list ) , "trackNum" , "TRACKNUMBER" , &list );
 		first = false;
