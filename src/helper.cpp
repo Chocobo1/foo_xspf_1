@@ -431,8 +431,9 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_
 	}
 
 	// use cache
-	if( lru_cache != nullptr )
+	if( lru_cache != nullptr && list == in_list )
 	{
+		// entry not in cache
 		lru_cache->set( x_field , &tmp_list );
 	}
 

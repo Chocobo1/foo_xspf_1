@@ -53,12 +53,11 @@ class lruCache
 	public:
 		void set( const char *in_name , const T *in_data )
 		{
-			// find the one
-			for( auto i = cache.cbegin() , end = cache.cend() ; i != end ; ++i )
+			// check if exist already
+			for( const auto &i : cache )
 			{
-				if( i->name == in_name )
+				if( i.name == in_name )
 				{
-					cache.splice( cache.begin() , cache , i );  // move to head
 					return;
 				}
 			}
@@ -84,7 +83,7 @@ class lruCache
 		}
 
 	private:
-		static const t_size CACHE_SIZE = 100;
+		static const t_size CACHE_SIZE = 50;
 		std::list<cacheData> cache;
 };
 typedef lruCache<dbList> lruCacheImpl;
