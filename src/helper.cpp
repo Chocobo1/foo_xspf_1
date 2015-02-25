@@ -257,7 +257,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 	x_playlist->SetAttribute( "version" , 1 );
 	x_playlist->SetAttribute( "xmlns" , "http://xspf.org/ns/0/" );
 
-	// 4.1.1.2.8 date,  XML schema dateTime
+	// 4.1.1.2.8 date, XML schema dateTime
 	if( s->date )
 	{
 		const time_t now = time( NULL );
