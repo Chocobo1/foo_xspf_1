@@ -1,6 +1,6 @@
 #pragma once
 
-typedef pfc::list_t<metadb_handle_ptr> dbList;
+typedef metadb_handle_list dbList;
 
 
 template<class T>
