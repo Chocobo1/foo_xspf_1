@@ -165,6 +165,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 
 				m->add_callback( m_task );
 				db_list.move_from( *( list_ptr.get() ) );
+				db_list.sort_by_path_quick();
 			}
 
 			open_helper_no_location( p_callback , x_track , &db_list , &lru_cache );
@@ -437,7 +438,7 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_
 
 	// scan through list
 	dbList tmp_list;
-	for( t_size i = 0 , max = list->get_count(); i < max ; ++i )
+	for( t_size i = 0 , max = list->get_count() , j = 0 ; i < max ; ++i )
 	{
 		// get item from db
 		const auto item = list->get_item_ref( i );
@@ -451,7 +452,7 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_
 		const bool e_match = ( strcmp( str , x_field ) == 0 ) ? true : false;
 		if( e_match )
 		{
-			tmp_list.insert_item( item , 0 );  // put it at head
+			tmp_list.insert_item( item , j++ );  // put it at front
 			continue;
 		}
 
