@@ -41,7 +41,7 @@ class xmlBaseHelper
 		{
 			if( num >= XMLBASE_LEN )
 			{
-				console::printf( CONSOLE_HEADER"setXmlBase num error: %u" , num );
+				console::printf( CONSOLE_HEADER"xmlBaseHelper::set() num error: %u" , num );
 				return;
 			}
 

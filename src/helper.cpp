@@ -216,17 +216,19 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	const char *track_location_base = track_location->Attribute( "xml:base" );
 	xml_base->set( 3 , track_location_base );
 
+	// ONLY HANDLE PLAYABLE FILES OR URLS, LINKING TO ANOTHER PLAYLIST IS NOT SUPPORTED
+	const pfc::string8 out_str = uriToPath( track_location->GetText() , p_path , xml_base->get() );
+	if( out_str.is_empty() )
+	{
+		console::printf( CONSOLE_HEADER"uriToPath() return empty" );
+		return;
+	}
+
 	// file info variables
 	file_info_impl f_info;
 	metadb_handle_ptr f_handle;
-
-	// ONLY HANDLE PLAYABLE FILES OR URLS, LINKING TO ANOTHER PLAYLIST IS NOT SUPPORTED
-	const pfc::string8 out_str = uriToPath( track_location->GetText() , p_path , xml_base->get() );
-	if( !out_str.is_empty() )
-	{
-		p_callback->on_progress( out_str );
-		p_callback->handle_create( f_handle , make_playable_location( out_str , 0 ) );
-	}
+	p_callback->on_progress( out_str );
+	p_callback->handle_create( f_handle , make_playable_location( out_str , 0 ) );
 
 	// 4.1.1.2.14.1.1.1.3 title
 	if( cfg_read_no_title )
