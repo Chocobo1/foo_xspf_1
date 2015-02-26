@@ -37,11 +37,11 @@ template<class T>
 class xmlBaseHelper
 {
 	public:
-		void setXmlBase( const t_size num , const char *val )
+		void set( const t_size num , const char *val )
 		{
-			if( ( num < 0 ) || ( num >= XMLBASE_LEN ) )
+			if( num >= XMLBASE_LEN )
 			{
-				console::printf( CONSOLE_HEADER"setXmlBase num error: %d" , num );
+				console::printf( CONSOLE_HEADER"setXmlBase num error: %u" , num );
 				return;
 			}
 
@@ -55,7 +55,7 @@ class xmlBaseHelper
 			return;
 		}
 
-		T getXmlBase() const
+		T get() const
 		{
 			T out;
 			for( const auto &i : base )

@@ -44,7 +44,7 @@ class mainThreadTask : public main_thread_callback
 			return;
 		}
 
-		virtual void callback_run()
+		void callback_run()
 		{
 			static_api_ptr_t<library_manager> m;
 			switch( task_sel )
@@ -116,7 +116,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	}
 	// playlist xml:base
 	const char *x_playlist_base = x_playlist->Attribute( "xml:base" );
-	xml_base.setXmlBase( 0 , x_playlist_base );
+	xml_base.set( 0 , x_playlist_base );
 
 	// 4.1.1.1.1 xmlns
 	const char *x_playlist_ns = x_playlist->Attribute( "xmlns" );
@@ -151,7 +151,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	}
 	// trackList xml:base
 	const char *x_tracklist_base = x_tracklist->Attribute( "xml:base" );
-	xml_base.setXmlBase( 1 , x_tracklist_base );
+	xml_base.set( 1 , x_tracklist_base );
 
 	// 4.1.1.2.14.1.1 track
 	t_size counter = 0;
@@ -164,7 +164,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 
 		// track xml:base
 		const char *x_track_base = x_track->Attribute( "xml:base" );
-		xml_base.setXmlBase( 2 , x_track_base );
+		xml_base.set( 2 , x_track_base );
 
 		// 4.1.1.2.14.1.1.1.1 location
 		const auto *track_location = x_track->FirstChildElement( "location" );
@@ -214,14 +214,14 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 
 	// location xml:base
 	const char *track_location_base = track_location->Attribute( "xml:base" );
-	xml_base->setXmlBase( 3 , track_location_base );
+	xml_base->set( 3 , track_location_base );
 
 	// file info variables
 	file_info_impl f_info;
 	metadb_handle_ptr f_handle;
 
 	// ONLY HANDLE PLAYABLE FILES OR URLS, LINKING TO ANOTHER PLAYLIST IS NOT SUPPORTED
-	const pfc::string8 out_str = uriToPath( track_location->GetText() , p_path , xml_base->getXmlBase() );
+	const pfc::string8 out_str = uriToPath( track_location->GetText() , p_path , xml_base->get() );
 	if( !out_str.is_empty() )
 	{
 		p_callback->on_progress( out_str );
