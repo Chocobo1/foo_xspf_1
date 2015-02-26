@@ -36,9 +36,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class mainThreadTask : public main_thread_callback
 {
 	public:
+		void add_callback( const int t )
+		{
+			task_sel = t;
+			static_api_ptr_t<main_thread_callback_manager> m;
+			m->add_callback( this );
+			return;
+		}
+
 		virtual void callback_run()
 		{
-			static_api_ptr_t < library_manager >m;
+			static_api_ptr_t<library_manager> m;
 			switch( task_sel )
 			{
 				case 0:
@@ -57,7 +65,7 @@ class mainThreadTask : public main_thread_callback
 				default:
 				{
 					console::printf( CONSOLE_HEADER"Invalid task_sel: %d" , task_sel );
-					return;
+					break;
 				}
 			};
 
@@ -65,13 +73,12 @@ class mainThreadTask : public main_thread_callback
 			return;
 		}
 
-
-		int task_sel = -1;
-
 		std::promise<bool> is_library_enabled;
+		std::promise<dbList *> list_ptr;
 
+	private:
 		dbList list;
-		std::promise< dbList * > list_ptr;
+		int task_sel = -1;
 };
 
 
@@ -175,14 +182,11 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 				// first time init
 
 				// library_manager class could only be used in main thread, here is worker thread
-				static_api_ptr_t<main_thread_callback_manager>m;
 				service_ptr_t<mainThreadTask> m_task( new service_impl_t<mainThreadTask>() );
 
 				// get library status
-				m_task->task_sel = 0;
 				auto is_library = m_task->is_library_enabled.get_future();
-
-				m->add_callback( m_task );
+				m_task->add_callback( 0 );
 				if( !is_library.get() )
 				{
 					console::printf( CONSOLE_HEADER"Media library is not enabled, please configure it first" );
@@ -190,11 +194,10 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 				}
 
 				// get media library
-				m_task->task_sel = 1;
 				auto list_ptr = m_task->list_ptr.get_future();
-
-				m->add_callback( m_task );
+				m_task->add_callback( 1 );
 				db_list.move_from( *( list_ptr.get() ) );
+
 				db_list.sort_by_path_quick();
 			}
 
