@@ -1,7 +1,8 @@
 # foo_xspf_1
 XSPF playlist plugin for foobar2000
 
-Support XSPF version 1 format
+* Support XSPF version 1 format
+* Read/write playlist without \<location\>
 
 ### Download
 [Project release page](https://github.com/Chocobo1/foo_xspf_1/releases)
@@ -9,15 +10,10 @@ Support XSPF version 1 format
 ### Usage
 * To read a XSPF playlist, drag and drop the playlist to foobar2000, or just open it as you normally do (duh
 * To generate a XSPF playlist, select menu `File` -> `Save playlist...`, or right click -> `Utilities` -> `Save as playlist...`
+* Options are listed at `File` -> `Preferences` -> page `Advanced` -> tab `Tools` -> `XSPF playlist`
 
 ### Compile
-* Visual Studio 2013 Express
-* [Visual Studio 2013 & 2015 compatibility notice](http://www.hydrogenaud.io/forums/index.php?showtopic=108411)
-
-### TODO
-Functionality to be added later:
-* Generate playlist without location element
-* Read playlist without location element
+* Visual Studio 2013 Express [(compatibility notice)](http://www.hydrogenaud.io/forums/index.php?showtopic=108411)
 
 ### License
 See [LICENSE](https://github.com/Chocobo1/foo_xspf_1/blob/master/LICENSE) file
