@@ -77,7 +77,7 @@ bool xspf::can_write()
 void xspf::open( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort )
 {
 	// avoid file open loop
-	static lruCache<bool> open_list( 65535 );
+	static lruCache<bool> open_list( FILE_OPEN_MAX );
 	if( open_list.get( p_path ) != nullptr )
 		return;
 	open_list.set( p_path , true );
