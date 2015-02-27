@@ -59,9 +59,9 @@ const char *xspf::get_extension()
 bool xspf::is_our_content_type( const char *p_content_type )
 {
 	const char mime[] = "application/xspf+xml";
-	if( strcmp( p_content_type , mime ) == 0 )
-		return true;
-	return false;
+	if( strcmp( p_content_type , mime ) != 0 )
+		return false;
+	return true;
 }
 
 bool xspf::is_associatable()
@@ -77,10 +77,10 @@ bool xspf::can_write()
 void xspf::open( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort )
 {
 	// avoid file open loop
-	static lruCache<bool> open_list( FILE_OPEN_MAX );
-	if( open_list.get( p_path ) != nullptr )
+	static LruCache<bool> file_list( FILE_OPEN_MAX );
+	if( file_list.get( p_path ) != nullptr )
 		return;
-	open_list.set( p_path , true );
+	file_list.set( p_path , true );
 
 	pfc::hires_timer t;
 	t.start();
@@ -91,12 +91,12 @@ void xspf::open( const char *p_path , const service_ptr_t<file> &p_file , playli
 	}
 	catch( ... )
 	{
-		open_list.remove( p_path );
+		file_list.remove( p_path );
 		throw;
 	}
 	console::printf( CONSOLE_HEADER"Read time: %s, %s" , t.queryString().toString() , p_path );
 
-	open_list.remove( p_path );
+	file_list.remove( p_path );
 	return;
 }
 

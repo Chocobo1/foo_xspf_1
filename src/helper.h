@@ -30,48 +30,42 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-typedef metadb_handle_list dbList;
+typedef metadb_handle_list DbList;
 
 template<class T>
-class xmlBaseHelper
+class XmlBaseHelper
 {
 	public:
 		void set( const t_size num , const char *val )
 		{
 			if( num >= XMLBASE_SIZE )
 			{
-				console::printf( CONSOLE_HEADER"xmlBaseHelper::set() num error: %u" , num );
+				console::printf( CONSOLE_HEADER"XmlBaseHelper::set() num error: %u" , num );
+				return;
+			}
+
+			base[num] = ( val == nullptr ) ? "" : val ;
 			return;
 		}
 
-		if( val == nullptr )
+		T get() const
 		{
-			base[num].reset();
-			return;
+			T out;
+			for( const auto &i : base )
+			{
+				out += i;
+			}
+			return out;  // RVO kicks in
 		}
-
-		base[num] = val;
-		return;
-	}
-
-	T get() const
-	{
-		T out;
-		for( const auto &i : base )
-		{
-			out += i;
-		}
-		return out;  // RVO kicks in
-	}
 
 	private:
-	static const t_size XMLBASE_SIZE = 4;  // playlist, trackList, track, location
-	T base[XMLBASE_SIZE];
+		static const t_size XMLBASE_SIZE = 4;  // playlist, trackList, track, location
+		T base[XMLBASE_SIZE];
 };
-typedef xmlBaseHelper<pfc::string8> xmlBaseImpl;
+typedef XmlBaseHelper<pfc::string8> XmlBaseImpl;
 
 template<class T>
-class lruCache
+class LruCache
 {
 	struct cacheData
 	{
@@ -80,59 +74,59 @@ class lruCache
 	};
 
 	public:
-	explicit lruCache( const size_t limit = 50 ) : CACHE_SIZE( limit )
-	{
-		return;
-	}
-
-	bool set( const char *in_name , const T &in_data )
-	{
-		// check if exist already
-		for( const auto &i : cache )
+		explicit LruCache( const size_t limit = 50 ) : CACHE_SIZE( limit )
 		{
-			if( i.name == in_name )
-			{
-				return true;
-			}
+			return;
 		}
 
-		cache.push_front( { in_name , in_data } );
-		if( cache.size() > CACHE_SIZE )
-			cache.pop_back();
-		return false;
-	}
-
-	const T *get( const char *in_name )
-	{
-		for( auto i = cache.cbegin() , end = cache.cend() ; i != end ; ++i )
+		bool set( const char *in_name , const T &in_data )
 		{
-			if( i->name == in_name )
+			// check if exist already
+			for( const auto &i : cache )
 			{
-				cache.splice( cache.begin() , cache , i );  // move to head
-				return &cache.front().data;
+				if( i.name == in_name )
+				{
+					return true;
+				}
 			}
+
+			cache.push_front( { in_name , in_data } );
+			if( cache.size() > CACHE_SIZE )
+				cache.pop_back();
+			return false;
 		}
 
-		return nullptr;
-	}
-
-	void remove( const char *in_name )
-	{
-		for( auto i = cache.cbegin() , end = cache.cend() ; i != end ; ++i )
+		const T *get( const char *in_name )
 		{
-			if( i->name == in_name )
+			for( auto i = cache.cbegin() , end = cache.cend() ; i != end ; ++i )
 			{
-				cache.erase( i );
-				return;
+				if( i->name == in_name )
+				{
+					cache.splice( cache.begin() , cache , i );  // move to head
+					return &cache.front().data;
+				}
+			}
+
+			return nullptr;
+		}
+
+		void remove( const char *in_name )
+		{
+			for( auto i = cache.cbegin() , end = cache.cend() ; i != end ; ++i )
+			{
+				if( i->name == in_name )
+				{
+					cache.erase( i );
+					return;
+				}
 			}
 		}
-	}
 
 	private:
-	const size_t CACHE_SIZE;
-	std::list<cacheData> cache;
+		const size_t CACHE_SIZE;
+		std::list<cacheData> cache;
 };
-typedef lruCache<dbList> lruCacheHandleList;
+typedef LruCache<DbList> LruCacheHandleList;
 
 
 void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort );

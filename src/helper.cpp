@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "settings.h"
 
 // classes, typedefs
-class mainThreadTask : public main_thread_callback
+class MainThreadTask : public main_thread_callback
 {
 	public:
 		void add_callback( const int t )
@@ -48,11 +48,11 @@ class mainThreadTask : public main_thread_callback
 		void callback_run()  // overwrite virtual func
 		{
 			// main thread runs here
-			static_api_ptr_t<library_manager> m;
 			switch( task_sel )
 			{
 				case 0:
 				{
+					static_api_ptr_t<library_manager> m;
 					is_library_enabled.set_value( m->is_library_enabled() );
 					break;
 				}
@@ -61,6 +61,7 @@ class mainThreadTask : public main_thread_callback
 				{
 					l_1.remove_all();
 
+					static_api_ptr_t<library_manager> m;
 					m->get_all_items( l_1 );
 					list_out.set_value( &l_1 );
 					break;
@@ -91,23 +92,23 @@ class mainThreadTask : public main_thread_callback
 		std::promise<bool> is_library_enabled;
 
 		// 1
-		std::promise<dbList *> list_out;
+		std::promise<DbList *> list_out;
 
 		// 2
 		pfc::list_t<const char *> resolve_list_in;
-		std::promise<dbList * > resolve_list_out;
+		std::promise<DbList * > resolve_list_out;
 
 	private:
 		int task_sel = -1;
 
 		// 1
-		dbList l_1;
+		DbList l_1;
 
 		// 2
-		dbList l_2;
+		DbList l_2;
 };
 
-class trackQueue
+class TrackQueue
 {
 	public:
 		void add( const char *in )
@@ -129,7 +130,9 @@ class trackQueue
 			if( str_list.get_count() == 0 )
 				return;
 
-			service_ptr_t<mainThreadTask> m_task( new service_impl_t<mainThreadTask>() );
+			service_ptr_t<MainThreadTask> m_task( new service_impl_t<MainThreadTask>() );
+
+			m_task->resolve_list_in.remove_all();
 			for( t_size i = 0 , max = str_list.get_count() ; i < max ; ++i )
 			{
 				const char *tmp = str_list.get_item_ref( i );
@@ -140,7 +143,7 @@ class trackQueue
 			m_task->add_callback( 2 );
 
 			// add
-			const dbList l = *( cb_list.get() );
+			const DbList l = *( cb_list.get() );
 			for( t_size i = 0 , max = l.get_count() ; i < max ; ++i )
 			{
 				p_callback->on_entry( l.get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
@@ -156,12 +159,21 @@ class trackQueue
 
 
 // prototypes
-void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseImpl *xml_base , trackQueue *queue );
-void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheHandleList *lru_cache );
+void openHelperLocation( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , XmlBaseImpl *xml_base , TrackQueue *queue );
+void openHelperNoLocation( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const DbList *in_list , LruCacheHandleList *lru_cache );
 
-bool initDbListHelper( dbList *db_list );
-void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const char *x_name , const char *db_name );
-void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_list , const char *x_name , const char *db_name , dbList *out , lruCacheHandleList *lru_cache = nullptr );
+bool initDbListHelper( DbList *l );
+void addInfoHelper( file_info_impl *f , const char *meta_name , const tinyxml2::XMLElement *x , const char *e_name );
+void filterFieldHelper( DbList *out , const tinyxml2::XMLElement *x , const char *e_name , const DbList *in_list , const char *meta_name , LruCacheHandleList *lru_cache = nullptr );
+
+tinyxml2::XMLElement *xAddElement( tinyxml2::XMLDocument *x_doc , tinyxml2::XMLNode *x_parent , const char *e_name );
+void xAddMeta( tinyxml2::XMLDocument *x_doc , tinyxml2::XMLNode *x_parent , const char *e_name , const char *meta_text );
+void xVerifyDocument( tinyxml2::XMLDocument *x , const char *f );
+const tinyxml2::XMLElement *xVerifyElement( const tinyxml2::XMLNode *x , const char *e_name );
+void xVerifyVersion( const tinyxml2::XMLElement *x );
+void xVerifyNamespace( const tinyxml2::XMLElement *x );
+const char *xVerifyAttribute( const tinyxml2::XMLElement *x , const char *a_name );
+const char *xGetChildElementText( const tinyxml2::XMLElement *x , const char *e_name );
 
 pfc::string8 pathToUri( const char *in_path , const char *ref_path );
 pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 xbase_str );
@@ -186,96 +198,63 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 		throw;
 	}
 
+	// parse doc
 	tinyxml2::XMLDocument x;
-	auto ret = x.Parse( in_file );
-	if( ret != tinyxml2::XML_NO_ERROR )
-	{
-		console::printf( CONSOLE_HEADER"XML parse error id: %d, msg: %s" , ret , x.GetErrorStr1() );
-		throw exception_io_data();
-	}
-
-	xmlBaseImpl xml_base;
+	xVerifyDocument( &x , in_file );
 
 	// 4.1.1 playlist
-	const auto *x_playlist = x.FirstChildElement( "playlist" );
-	if( x_playlist == nullptr )
-	{
-		console::printf( CONSOLE_HEADER"missing playlist element!" );
-		throw exception_io_data();
-	}
+	const auto x_playlist = xVerifyElement( &x , "playlist" );
+
 	// playlist xml:base
-	const char *x_playlist_base = x_playlist->Attribute( "xml:base" );
-	xml_base.set( 0 , x_playlist_base );
+	XmlBaseImpl xml_base;
+	const char *playlist_base = x_playlist->Attribute( "xml:base" );
+	xml_base.set( 0 , playlist_base );
 
 	// 4.1.1.1.1 xmlns
-	const char *x_playlist_ns = x_playlist->Attribute( "xmlns" );
-	if( x_playlist_ns == nullptr )
-	{
-		console::printf( CONSOLE_HEADER"missing xmlns attribute!" );
-		throw exception_io_data();
-	}
-	const pfc::string8 ns = "http://xspf.org/ns/0/";
-	const int x_playlist_ns_eq = strncmp( x_playlist_ns , ns , ns.get_length() );
-	if( x_playlist_ns_eq != 0 )
-	{
-		console::printf( CONSOLE_HEADER"namespace error: %s" , x_playlist_ns );
-		throw exception_io_data();
-	}
+	xVerifyNamespace( x_playlist );
 
 	// 4.1.1.1.2 version
-	int x_playlist_version = -1;
-	x_playlist->QueryIntAttribute( "version" , &x_playlist_version );
-	if( ( x_playlist_version < 0 ) || ( x_playlist_version > 1 ) )
-	{
-		console::printf( CONSOLE_HEADER"version error: %d" , x_playlist_version );
-		throw exception_io_data();
-	}
+	xVerifyVersion( x_playlist );
 
 	// 4.1.1.2.14 trackList
-	const auto *x_tracklist = x_playlist->FirstChildElement( "trackList" );
-	if( x_tracklist == nullptr )
-	{
-		console::printf( CONSOLE_HEADER"missing trackList element!" );
-		throw exception_io_data();
-	}
+	const auto x_tracklist = xVerifyElement( x_playlist , "trackList" );
+
 	// trackList xml:base
-	const char *x_tracklist_base = x_tracklist->Attribute( "xml:base" );
-	xml_base.set( 1 , x_tracklist_base );
+	const char *tracklist_base = x_tracklist->Attribute( "xml:base" );
+	xml_base.set( 1 , tracklist_base );
 
 	// 4.1.1.2.14.1.1 track
 	t_size counter = 0;
-	dbList db_list;  // don't call main thread for every <track>
-	trackQueue t_queue;
-	lruCacheHandleList lru_cache;
+	DbList db_list;  // don't call main thread for every <track>
+	TrackQueue t_queue;
+	LruCacheHandleList lru_cache;
 	for( auto *x_track = x_tracklist->FirstChildElement( "track" ) ; x_track != nullptr ; x_track = x_track->NextSiblingElement( "track" ) )
 	{
 		if( p_abort.is_aborting() )
 			return;
 
 		// track xml:base
-		const char *x_track_base = x_track->Attribute( "xml:base" );
-		xml_base.set( 2 , x_track_base );
+		const char *track_base = x_track->Attribute( "xml:base" );
+		xml_base.set( 2 , track_base );
 
 		// 4.1.1.2.14.1.1.1.1 location
-		const auto *track_location = x_track->FirstChildElement( "location" );
-		if( cfg_read_location && ( track_location != nullptr ) && ( track_location->GetText() != nullptr ) )
+		const auto *track_location_text = xGetChildElementText( x_track , "location" );
+		if( cfg_read_location && ( track_location_text != nullptr ) )
 		{
 			// have location
-			open_helper_location( p_path , p_callback , x_track , &xml_base , &t_queue );
+			openHelperLocation( p_path , p_callback , x_track , &xml_base , &t_queue );
 		}
 		else
 		{
 			t_queue.resolve( p_callback );  // to maintain trackList order
 
-			p_callback->on_progress( ( "track " + std::to_string( counter++ ) ).c_str() );
+			p_callback->on_progress( ("track " + std::to_string( counter++ )).c_str() );
 
-			const bool metadb_check = initDbListHelper( &db_list );
-			if( !metadb_check )
-			{
-				console::printf( CONSOLE_HEADER"Media library is not enabled, please configure it first" );
+			const bool is_init_ok = initDbListHelper( &db_list );
+			if( !is_init_ok )
 				return;
-			}
-			open_helper_no_location( p_callback , x_track , &db_list , &lru_cache );
+
+			openHelperNoLocation( p_callback , x_track , &db_list , &lru_cache );
 		}
 	}
 
@@ -284,16 +263,16 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	return;
 }
 
-void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseImpl *xml_base , trackQueue *queue )
+void openHelperLocation( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , XmlBaseImpl *xml_base , TrackQueue *queue )
 {
-	const auto *track_location = x_track->FirstChildElement( "location" );
+	const auto *x_track_location = x_track->FirstChildElement( "location" );
 
 	// location xml:base
-	const char *track_location_base = track_location->Attribute( "xml:base" );
+	const char *track_location_base = x_track_location->Attribute( "xml:base" );
 	xml_base->set( 3 , track_location_base );
 
-	const pfc::string8 out_str = uriToPath( track_location->GetText() , p_path , xml_base->get() );
-	if( out_str.is_empty() )
+	const pfc::string8 track_path = uriToPath( x_track_location->GetText() , p_path , xml_base->get() );
+	if( track_path.is_empty() )
 	{
 		console::printf( CONSOLE_HEADER"uriToPath() return empty" );
 		return;
@@ -306,27 +285,27 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 		file_info_impl f_info;
 		metadb_handle_ptr f_handle;
 
-		p_callback->on_progress( out_str );
-		p_callback->handle_create( f_handle , make_playable_location( out_str , 0 ) );
+		p_callback->on_progress( track_path );
+		p_callback->handle_create( f_handle , make_playable_location( track_path , 0 ) );
 
 		// 4.1.1.2.14.1.1.1.3 title
 		if( cfg_read_title )
-			addInfoHelper( x_track , &f_info , "title" , "TITLE" );
+			addInfoHelper( &f_info , "TITLE" , x_track , "title" );
 
 		// 4.1.1.2.14.1.1.1.4 creator
 		if( cfg_read_creator )
-			addInfoHelper( x_track , &f_info , "creator" , "ARTIST" );
+			addInfoHelper( &f_info , "ARTIST" , x_track , "creator" );
 
 		// 4.1.1.2.14.1.1.1.5 annotation
-		addInfoHelper( x_track , &f_info , "annotation" , "COMMENT" );
+		addInfoHelper( &f_info , "COMMENT" , x_track , "annotation" );
 
 		// 4.1.1.2.14.1.1.1.5 album
 		if( cfg_read_album )
-			addInfoHelper( x_track , &f_info , "album" , "ALBUM" );
+			addInfoHelper( &f_info , "ALBUM" , x_track , "album" );
 
 		// 4.1.1.2.14.1.1.1.9 trackNum
 		if( cfg_read_tracknum )
-			addInfoHelper( x_track , &f_info , "trackNum" , "TRACKNUMBER" );
+			addInfoHelper( &f_info , "TRACKNUMBER" , x_track , "trackNum" );
 
 		// insert into playlist
 		p_callback->on_entry_info( f_handle , playlist_loader_callback::entry_user_requested , filestats_invalid , f_info , false );
@@ -337,41 +316,41 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	// TODO: search in metadb to speed up
 
 	// add to queue for later batch process
-	queue->add( out_str );
+	queue->add( track_path );
 	return;
 }
 
-void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheHandleList *lru_cache )
+void openHelperNoLocation( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const DbList *in_list , LruCacheHandleList *lru_cache )
 {
-	dbList list;
-	bool first = true;
+	DbList list;
+	bool is_first = true;
 
 	// 4.1.1.2.14.1.1.1.5 album
 	if( cfg_read_album )
 	{
-		filterFieldHelper( x_track , ( first ? in_list : &list ) , "album" , "ALBUM" , &list , lru_cache );
-		first = false;
+		filterFieldHelper( &list , x_track , "album" , ( is_first ? in_list : &list ) , "ALBUM" , lru_cache );
+		is_first = false;
 	}
 
 	// 4.1.1.2.14.1.1.1.3 title
 	if( cfg_read_title )
 	{
-		filterFieldHelper( x_track , ( first ? in_list : &list ) , "title" , "TITLE" , &list );
-		first = false;
+		filterFieldHelper( &list , x_track , "title" , ( is_first ? in_list : &list ) , "TITLE" );
+		is_first = false;
 	}
 
 	// 4.1.1.2.14.1.1.1.4 creator
 	if( cfg_read_creator )
 	{
-		filterFieldHelper( x_track , ( first ? in_list : &list ) , "creator" , "ARTIST" , &list );
-		first = false;
+		filterFieldHelper( &list , x_track , "creator" , ( is_first ? in_list : &list ) , "ARTIST" );
+		is_first = false;
 	}
 
 	// 4.1.1.2.14.1.1.1.9 trackNum
 	if( cfg_read_tracknum )
 	{
-		filterFieldHelper( x_track , ( first ? in_list : &list ) , "trackNum" , "TRACKNUMBER" , &list );
-		first = false;
+		filterFieldHelper( &list , x_track , "trackNum" , ( is_first ? in_list : &list ) , "TRACKNUMBER" );
+		is_first = false;
 	}
 
 	// add result
@@ -395,8 +374,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 	x.InsertEndChild( x_decl );
 
 	// 4.1.1 playlist
-	auto x_playlist = x.NewElement( "playlist" );
-	x.InsertEndChild( x_playlist );
+	auto x_playlist = xAddElement( &x , &x , "playlist" );
 	x_playlist->SetAttribute( "version" , 1 );
 	x_playlist->SetAttribute( "xmlns" , "http://xspf.org/ns/0/" );
 
@@ -408,15 +386,11 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		struct tm tmp_tm = { 0 };
 		gmtime_s( &tmp_tm , &now );
 		strftime( time_buf , ( sizeof( time_buf ) - 1 ) , "%Y-%m-%dT%H:%M:%SZ" , &tmp_tm );
-
-		auto x_date = x.NewElement( "date" );
-		x_playlist->InsertEndChild( x_date );
-		x_date->SetText( time_buf );
+		xAddMeta( &x , x_playlist , "date" , time_buf );
 	}
 
 	// 4.1.1.2.14 trackList
-	auto x_tracklist = x.NewElement( "trackList" );
-	x_playlist->InsertEndChild( x_tracklist );
+	auto x_tracklist = xAddElement( &x , x_playlist , "trackList" );
 
 	// for each track
 	for( t_size i = 0 , max = p_data.get_size(); i < max ; ++i )
@@ -425,72 +399,60 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 			return;
 
 		// fetch track info
-		const metadb_handle_ptr track_item = p_data.get_item( i );
+		const auto track_item = p_data.get_item( i );
 		const auto track_info = track_item->get_async_info_ref();
 
 		// 4.1.1.2.14.1.1 track
-		auto x_track = x.NewElement( "track" );
-		x_tracklist->InsertEndChild( x_track );
+		auto x_track = xAddElement( &x , x_tracklist , "track" );
 
 		// 4.1.1.2.14.1.1.1.1 location
 		if( cfg_write_location )
 		{
-			const char *item_path = track_item->get_path();
-			const pfc::string8 track_path = pathToUri( item_path , p_path );
-			if( !track_path.is_empty() )
+			const char *track_path = track_item->get_path();
+			const auto track_uri = pathToUri( track_path , p_path );
+			if( !track_uri.is_empty() )
 			{
-				auto track_location = x.NewElement( "location" );
-				x_track->InsertEndChild( track_location );
-				track_location->SetText( track_path );
+				xAddMeta( &x , x_track , "location" , track_uri );
 			}
 		}
 
 		// 4.1.1.2.14.1.1.1.3 title
-		if( cfg_write_title && track_info->info().meta_exists( "TITLE" ) )
+		if( cfg_write_title )
 		{
 			const char *str = track_info->info().meta_get( "TITLE" , 0 );
-			auto track_title = x.NewElement( "title" );
-			x_track->InsertEndChild( track_title );
-			track_title->SetText( str );
+			xAddMeta( &x , x_track , "title" , str );
 		}
 
 		// 4.1.1.2.14.1.1.1.4 creator
-		if( cfg_write_creator && track_info->info().meta_exists( "ARTIST" ) )
+		if( cfg_write_creator )
 		{
 			const char *str = track_info->info().meta_get( "ARTIST" , 0 );
-			auto track_creator = x.NewElement( "creator" );
-			x_track->InsertEndChild( track_creator );
-			track_creator->SetText( str );
+			xAddMeta( &x , x_track , "creator" , str );
 		}
 
 		// 4.1.1.2.14.1.1.1.5 annotation
-		if( cfg_write_annotation && track_info->info().meta_exists( "COMMENT" ) )
+		if( cfg_write_annotation )
 		{
 			const char *str = track_info->info().meta_get( "COMMENT" , 0 );
-			auto track_annotation = x.NewElement( "annotation" );
-			x_track->InsertEndChild( track_annotation );
-			track_annotation->SetText( str );
+			xAddMeta( &x , x_track , "annotation" , str );
 		}
 
 		// 4.1.1.2.14.1.1.1.8 album
-		if( cfg_write_album && track_info->info().meta_exists( "ALBUM" ) )
+		if( cfg_write_album )
 		{
 			const char *str = track_info->info().meta_get( "ALBUM" , 0 );
-			auto track_album = x.NewElement( "album" );
-			x_track->InsertEndChild( track_album );
-			track_album->SetText( str );
+			xAddMeta( &x , x_track , "album" , str );
 		}
 
 		// 4.1.1.2.14.1.1.1.9 trackNum
 		if( cfg_write_tracknum && track_info->info().meta_exists( "TRACKNUMBER" ) )
 		{
-			const char *str = track_info->info().meta_get( "TRACKNUMBER" , 0 );
-			const long int num = strtol( str , NULL , 10 );
+			const char *tracknum = track_info->info().meta_get( "TRACKNUMBER" , 0 );
+			const long num = strtol( tracknum , NULL , 10 );
 			if( num > 0 )
 			{
-				auto track_tracknum = x.NewElement( "trackNum" );
-				x_track->InsertEndChild( track_tracknum );
-				track_tracknum->SetText( num );
+				const auto str = std::to_string( num );
+				xAddMeta( &x , x_track , "trackNum" , str.c_str() );
 			}
 		}
 
@@ -500,9 +462,8 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 			const double track_len = track_item->get_length() * 1000;
 			if( track_len > 0 )
 			{
-				auto track_duration = x.NewElement( "duration" );
-				x_track->InsertEndChild( track_duration );
-				track_duration->SetText( ( t_size ) track_len );
+				const auto str = std::to_string( lround( track_len ) );
+				xAddMeta( &x , x_track , "duration" , str.c_str() );
 			}
 		}
 	}
@@ -525,60 +486,56 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 }
 
 
-bool initDbListHelper( dbList *db_list )
+bool initDbListHelper( DbList *l )
 {
-	// return false when metadb is not enabled/configured
+	// return false when fail: metadb is not enabled/configured
 
-	if( db_list->get_count() == 0 )
+	if( l->get_count() == 0 )
 	{
 		// library_manager class could only be used in main thread, here is worker thread
-		service_ptr_t<mainThreadTask> m_task( new service_impl_t<mainThreadTask>() );
+		service_ptr_t<MainThreadTask> m_task( new service_impl_t<MainThreadTask>() );
 
 		// get library status
 		auto is_library = m_task->is_library_enabled.get_future();
 		m_task->add_callback( 0 );
 		if( !is_library.get() )
 		{
+			console::printf( CONSOLE_HEADER"Media library is not enabled, please configure it first" );
 			return false;
 		}
 
 		// get media library
 		auto list_ptr = m_task->list_out.get_future();
 		m_task->add_callback( 1 );
-		db_list->move_from( *( list_ptr.get() ) );
-
-		db_list->sort_by_path_quick();
+		l->move_from( *( list_ptr.get() ) );
+		l->sort_by_path_quick();
 	}
 
 	return true;
 }
 
-void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const char* x_name , const char *db_name )
+void addInfoHelper( file_info_impl *f , const char *meta_name , const tinyxml2::XMLElement *x , const char* e_name )
 {
-	const auto *info = x_parent->FirstChildElement( x_name );
-	if( ( info != nullptr ) && ( info->GetText() != nullptr ) )
+	const char *str = xGetChildElementText( x , e_name );
+	if( str != nullptr )
 	{
-		f->meta_add( db_name , info->GetText() );
+		f->meta_add( meta_name , str );
 	}
-
 	return;
 }
 
-void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_list , const char *x_name , const char *db_name , dbList *out , lruCacheHandleList *lru_cache )
+void filterFieldHelper( DbList *out , const tinyxml2::XMLElement *x , const char *e_name , const DbList *in_list , const char *meta_name , LruCacheHandleList *lru_cache )
 {
 	// prepare
-	const auto *x = x_parent->FirstChildElement( x_name );
-	if( x == nullptr )
-		return;
-	const char *x_field = x->GetText();
-	if( x_field == nullptr )
+	const char *x_str = xGetChildElementText( x , e_name );
+	if( x_str == nullptr )
 		return;
 
 	// use cache
-	const dbList *list = in_list;
+	const DbList *list = in_list;
 	if( lru_cache != nullptr )
 	{
-		const dbList *t = lru_cache->get( x_field );
+		const DbList *t = lru_cache->get( x_str );
 		if( t != nullptr )
 		{
 			list = t;
@@ -586,30 +543,29 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_
 	}
 
 	// scan through list
-	dbList tmp_list;
+	DbList out_list;
 	for( t_size i = 0 , max = list->get_count() , j = 0 ; i < max ; ++i )
 	{
-		// get item from db
+		// get meta string from db
 		const auto item = list->get_item_ref( i );
 		const auto info = item->get_async_info_ref();
-
-		const char *str = info->info().meta_get( db_name , 0 );
+		const char *str = info->info().meta_get( meta_name , 0 );
 		if( str == nullptr )
 			continue;
 
 		// try exact match
-		const bool e_match = ( strcmp( str , x_field ) == 0 ) ? true : false;
+		const bool e_match = ( strcmp( str , x_str ) == 0 ) ? true : false;
 		if( e_match )
 		{
-			tmp_list.insert_item( item , j++ );  // put it at front
+			out_list.insert_item( item , j++ );  // put it at front
 			continue;
 		}
 
 		// try partial match
-		const bool p_match = ( strstr( str , x_field ) != nullptr ) ? true : false;
+		const bool p_match = ( strstr( str , x_str ) != nullptr ) ? true : false;
 		if( p_match )
 		{
-			tmp_list += item;
+			out_list += item;
 		}
 	}
 
@@ -617,11 +573,98 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_
 	if( lru_cache != nullptr && list == in_list )
 	{
 		// entry not in cache
-		lru_cache->set( x_field , tmp_list );
+		lru_cache->set( x_str , out_list );
 	}
 
-	out->move_from( tmp_list );
+	out->move_from( out_list );
 	return;
+}
+
+
+tinyxml2::XMLElement* xAddElement( tinyxml2::XMLDocument *x_doc , tinyxml2::XMLNode *x_parent , const char * e_name )
+{
+	tinyxml2::XMLElement *x = x_doc->NewElement( e_name );
+	x_parent->InsertEndChild( x );
+	return x;
+}
+
+void xAddMeta( tinyxml2::XMLDocument *x_doc , tinyxml2::XMLNode *x_parent , const char * e_name , const char *meta_text )
+{
+	if( meta_text != nullptr )
+	{
+		tinyxml2::XMLElement *x = xAddElement( x_doc , x_parent , e_name );
+		x->SetText( meta_text );
+	}
+	return;
+}
+
+void xVerifyDocument( tinyxml2::XMLDocument *x , const char * f )
+{
+	const tinyxml2::XMLError ret = x->Parse( f );
+	if( ret != tinyxml2::XML_NO_ERROR )
+	{
+		console::printf( CONSOLE_HEADER"XML parse error id: %d, msg: %s" , ret , x->GetErrorStr1() );
+		throw exception_io_data();
+	}
+	return;
+}
+
+const tinyxml2::XMLElement* xVerifyElement( const tinyxml2::XMLNode *x , const char * e_name )
+{
+	const tinyxml2::XMLElement *x_element = x->FirstChildElement( e_name );
+	if( x_element == nullptr )
+	{
+		console::printf( CONSOLE_HEADER"missing %s element!" , e_name );
+		throw exception_io_data();
+	}
+
+	return x_element;
+}
+
+const char * xVerifyAttribute( const tinyxml2::XMLElement *x , const char * a_name )
+{
+	const char *x_attribute = x->Attribute( a_name );
+	if( x_attribute == nullptr )
+	{
+		console::printf( CONSOLE_HEADER"missing %s attribute!" , a_name );
+		throw exception_io_data();
+	}
+	return x_attribute;
+}
+
+void xVerifyVersion( const tinyxml2::XMLElement *x )
+{
+	int x_playlist_version = -1;
+	x->QueryIntAttribute( "version" , &x_playlist_version );
+	if( ( x_playlist_version < 0 ) || ( x_playlist_version > 1 ) )
+	{
+		console::printf( CONSOLE_HEADER"version error: %d" , x_playlist_version );
+		throw exception_io_data();
+	}
+	return;
+}
+
+void xVerifyNamespace( const tinyxml2::XMLElement *x )
+{
+	const char *x_namespace = xVerifyAttribute( x , "xmlns" );
+
+	const pfc::string8 ns = "http://xspf.org/ns/0/";
+	if( strncmp( x_namespace , ns , ns.get_length() ) != 0 )
+	{
+		console::printf( CONSOLE_HEADER"namespace error: %s" , x_namespace );
+		throw exception_io_data();
+	}
+	return;
+}
+
+const char * xGetChildElementText( const tinyxml2::XMLElement *x , const char * e_name )
+{
+	const auto *x_child = x->FirstChildElement( e_name );
+	if( x_child != nullptr )
+	{
+		return x_child->GetText();
+	}
+	return nullptr;
 }
 
 
@@ -630,7 +673,7 @@ pfc::string8 pathToUri( const char *in_path , const char *ref_path )
 	pfc::string8 out;
 
 	pfc::string8 path_str = in_path;
-	if( !filesystem::g_is_remote_safe( in_path ) )
+	if( !filesystem::g_is_remote_safe( path_str ) )
 	{
 		// local path
 		// try extract relative path
@@ -668,8 +711,8 @@ pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::s
 
 	// check "file:" scheme
 	pfc::string8 in_str = urlDecodeUtf8( in_uri );
-	const bool local = in_str.has_prefix( "file:" );
-	if( local )
+	const bool is_local = in_str.has_prefix( "file:" );
+	if( is_local )
 	{
 		// prepare
 		in_str.replace_string( "file:///" , "" );
