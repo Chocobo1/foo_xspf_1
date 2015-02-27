@@ -159,6 +159,7 @@ class trackQueue
 void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseImpl *xml_base , trackQueue *queue );
 void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheHandleList *lru_cache );
 
+bool initDbListHelper( dbList *db_list );
 void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const char *x_name , const char *db_name );
 void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_list , const char *x_name , const char *db_name , dbList *out , lruCacheHandleList *lru_cache = nullptr );
 
@@ -268,30 +269,12 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 
 			p_callback->on_progress( ( "track " + std::to_string( counter++ ) ).c_str() );
 
-			if( db_list.get_count() == 0 )  // minimize async calls
+			const bool metadb_check = initDbListHelper( &db_list );
+			if( !metadb_check )
 			{
-				// first time init
-
-				// library_manager class could only be used in main thread, here is worker thread
-				service_ptr_t<mainThreadTask> m_task( new service_impl_t<mainThreadTask>() );
-
-				// get library status
-				auto is_library = m_task->is_library_enabled.get_future();
-				m_task->add_callback( 0 );
-				if( !is_library.get() )
-				{
-					console::printf( CONSOLE_HEADER"Media library is not enabled, please configure it first" );
-					return;
-				}
-
-				// get media library
-				auto list_ptr = m_task->list_out.get_future();
-				m_task->add_callback( 1 );
-				db_list.move_from( *( list_ptr.get() ) );
-
-				db_list.sort_by_path_quick();
+				console::printf( CONSOLE_HEADER"Media library is not enabled, please configure it first" );
+				return;
 			}
-
 			open_helper_no_location( p_callback , x_track , &db_list , &lru_cache );
 		}
 	}
@@ -542,6 +525,34 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 }
 
 
+bool initDbListHelper( dbList *db_list )
+{
+	// return false when metadb is not enabled/configured
+
+	if( db_list->get_count() == 0 )
+	{
+		// library_manager class could only be used in main thread, here is worker thread
+		service_ptr_t<mainThreadTask> m_task( new service_impl_t<mainThreadTask>() );
+
+		// get library status
+		auto is_library = m_task->is_library_enabled.get_future();
+		m_task->add_callback( 0 );
+		if( !is_library.get() )
+		{
+			return false;
+		}
+
+		// get media library
+		auto list_ptr = m_task->list_out.get_future();
+		m_task->add_callback( 1 );
+		db_list->move_from( *( list_ptr.get() ) );
+
+		db_list->sort_by_path_quick();
+	}
+
+	return true;
+}
+
 void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const char* x_name , const char *db_name )
 {
 	const auto *info = x_parent->FirstChildElement( x_name );
@@ -631,7 +642,7 @@ pfc::string8 pathToUri( const char *in_path , const char *ref_path )
 		}
 		path_str.replace_string( "file://" , "file:///" );
 
-		// when loaded a track with <location> while it's not in metadb and fb2k didn't reads its meta yet. the generated xspf playlist will not have "file://" scheme
+		// rare case, when loaded a track with <location> while it's not in metadb and fb2k didn't reads its meta yet. the generated xspf playlist will not have "file://" scheme
 		if( !path_str.has_prefix_i( "file:/" ) )
 		{
 			path_str.insert_chars(0,"file:///");
