@@ -37,121 +37,121 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class mainThreadTask : public main_thread_callback
 {
 	public:
-	void add_callback( const int t )
-	{
-		task_sel = t;
-		static_api_ptr_t<main_thread_callback_manager> m;
-		m->add_callback( this );
-		return;
-	}
-
-	void callback_run()  // overwrite virtual func
-	{
-		// main thread runs here
-		static_api_ptr_t<library_manager> m;
-		switch( task_sel )
+		void add_callback( const int t )
 		{
-			case 0:
+			task_sel = t;
+			static_api_ptr_t<main_thread_callback_manager> m;
+			m->add_callback( this );
+			return;
+		}
+
+		void callback_run()  // overwrite virtual func
+		{
+			// main thread runs here
+			static_api_ptr_t<library_manager> m;
+			switch( task_sel )
 			{
-				is_library_enabled.set_value( m->is_library_enabled() );
-				break;
-			}
+				case 0:
+				{
+					is_library_enabled.set_value( m->is_library_enabled() );
+					break;
+				}
 
-			case 1:
-			{
-				l_1.remove_all();
+				case 1:
+				{
+					l_1.remove_all();
 
-				m->get_all_items( l_1 );
-				list_out.set_value( &l_1 );
-				break;
-			}
+					m->get_all_items( l_1 );
+					list_out.set_value( &l_1 );
+					break;
+				}
 
-			case 2:
-			{
-				l_2.remove_all();
+				case 2:
+				{
+					l_2.remove_all();
 
-				static_api_ptr_t<playlist_incoming_item_filter> p;
-				p->process_locations( resolve_list_in , l_2 , false , nullptr , nullptr , NULL );
-				resolve_list_out.set_value( &l_2 );
-				break;
-			}
+					static_api_ptr_t<playlist_incoming_item_filter> p;
+					p->process_locations( resolve_list_in , l_2 , false , nullptr , nullptr , NULL );
+					resolve_list_out.set_value( &l_2 );
+					break;
+				}
 
-			default:
-			{
-				console::printf( CONSOLE_HEADER"Invalid task_sel: %d" , task_sel );
-				break;
-			}
-		};
+				default:
+				{
+					console::printf( CONSOLE_HEADER"Invalid task_sel: %d" , task_sel );
+					break;
+				}
+			};
 
-		task_sel = -1;
-		return;
-	}
+			task_sel = -1;
+			return;
+		}
 
-	// 0
-	std::promise<bool> is_library_enabled;
+		// 0
+		std::promise<bool> is_library_enabled;
 
-	// 1
-	std::promise<dbList *> list_out;
+		// 1
+		std::promise<dbList *> list_out;
 
-	// 2
-	pfc::list_t<const char *> resolve_list_in;
-	std::promise<dbList * > resolve_list_out;
+		// 2
+		pfc::list_t<const char *> resolve_list_in;
+		std::promise<dbList * > resolve_list_out;
 
 	private:
-	int task_sel = -1;
+		int task_sel = -1;
 
-	// 1
-	dbList l_1;
+		// 1
+		dbList l_1;
 
-	// 2
-	dbList l_2;
+		// 2
+		dbList l_2;
 };
 
 class trackQueue
 {
 	public:
-	void add( const char *in )
-	{
-		str_list += in;
-		return;
-	}
-
-	void reset()
-	{
-		str_list.remove_all();
-		return;
-	}
-
-	void resolve( playlist_loader_callback::ptr p_callback )
-	{
-		// let fb2k handle all input
-
-		if( str_list.get_count() == 0 )
+		void add( const char *in )
+		{
+			str_list += in;
 			return;
-
-		service_ptr_t<mainThreadTask> m_task( new service_impl_t<mainThreadTask>() );
-		for( t_size i = 0 , max = str_list.get_count() ; i < max ; ++i )
-		{
-			const char *tmp = str_list.get_item_ref( i );
-			m_task->resolve_list_in += tmp;
-			p_callback->on_progress( tmp );
-		}
-		auto cb_list = m_task->resolve_list_out.get_future();
-		m_task->add_callback( 2 );
-
-		// add
-		const dbList l = *( cb_list.get() );
-		for( t_size i = 0 , max = l.get_count() ; i < max ; ++i )
-		{
-			p_callback->on_entry( l.get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
 		}
 
-		reset();
-		return;
-	}
+		void reset()
+		{
+			str_list.remove_all();
+			return;
+		}
+
+		void resolve( playlist_loader_callback::ptr p_callback )
+		{
+			// let fb2k handle all input
+
+			if( str_list.get_count() == 0 )
+				return;
+
+			service_ptr_t<mainThreadTask> m_task( new service_impl_t<mainThreadTask>() );
+			for( t_size i = 0 , max = str_list.get_count() ; i < max ; ++i )
+			{
+				const char *tmp = str_list.get_item_ref( i );
+				m_task->resolve_list_in += tmp;
+				p_callback->on_progress( tmp );
+			}
+			auto cb_list = m_task->resolve_list_out.get_future();
+			m_task->add_callback( 2 );
+
+			// add
+			const dbList l = *( cb_list.get() );
+			for( t_size i = 0 , max = l.get_count() ; i < max ; ++i )
+			{
+				p_callback->on_entry( l.get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
+			}
+
+			reset();
+			return;
+		}
 
 	private:
-	pfc::list_t<pfc::string8> str_list;
+		pfc::list_t<pfc::string8> str_list;
 };
 
 

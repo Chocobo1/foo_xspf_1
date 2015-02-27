@@ -36,11 +36,11 @@ template<class T>
 class xmlBaseHelper
 {
 	public:
-	void set( const t_size num , const char *val )
-	{
-		if( num >= XMLBASE_SIZE )
+		void set( const t_size num , const char *val )
 		{
-			console::printf( CONSOLE_HEADER"xmlBaseHelper::set() num error: %u" , num );
+			if( num >= XMLBASE_SIZE )
+			{
+				console::printf( CONSOLE_HEADER"xmlBaseHelper::set() num error: %u" , num );
 			return;
 		}
 
