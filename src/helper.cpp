@@ -45,8 +45,9 @@ class mainThreadTask : public main_thread_callback
 		return;
 	}
 
-	void callback_run()  // virtual func overwrite
+	void callback_run()  // overwrite virtual func
 	{
+		// main thread runs here
 		static_api_ptr_t<library_manager> m;
 		switch( task_sel )
 		{
@@ -72,7 +73,6 @@ class mainThreadTask : public main_thread_callback
 				static_api_ptr_t<playlist_incoming_item_filter> p;
 				p->process_locations( resolve_list_in , l_2 , false , nullptr , nullptr , NULL );
 				resolve_list_out.set_value( &l_2 );
-				resolve_list_in.remove_all();
 				break;
 			}
 
@@ -116,6 +116,12 @@ class trackQueue
 		return;
 	}
 
+	void reset()
+	{
+		str_list.remove_all();
+		return;
+	}
+
 	void resolve( playlist_loader_callback::ptr p_callback )
 	{
 		// let fb2k handle all input
@@ -130,7 +136,6 @@ class trackQueue
 			m_task->resolve_list_in += tmp;
 			p_callback->on_progress( tmp );
 		}
-
 		auto cb_list = m_task->resolve_list_out.get_future();
 		m_task->add_callback( 2 );
 
@@ -141,7 +146,7 @@ class trackQueue
 			p_callback->on_entry( l.get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
 		}
 
-		str_list.remove_all();
+		reset();
 		return;
 	}
 
@@ -252,7 +257,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 
 		// 4.1.1.2.14.1.1.1.1 location
 		const auto *track_location = x_track->FirstChildElement( "location" );
-		if( cfg_read_no_location && ( track_location != nullptr ) && ( track_location->GetText() != nullptr ) )
+		if( cfg_read_location && ( track_location != nullptr ) && ( track_location->GetText() != nullptr ) )
 		{
 			// have location
 			open_helper_location( p_path , p_callback , x_track , &xml_base , &t_queue );
@@ -322,22 +327,22 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 		p_callback->handle_create( f_handle , make_playable_location( out_str , 0 ) );
 
 		// 4.1.1.2.14.1.1.1.3 title
-		if( cfg_read_no_title )
+		if( cfg_read_title )
 			addInfoHelper( x_track , &f_info , "title" , "TITLE" );
 
 		// 4.1.1.2.14.1.1.1.4 creator
-		if( cfg_read_no_creator )
+		if( cfg_read_creator )
 			addInfoHelper( x_track , &f_info , "creator" , "ARTIST" );
 
 		// 4.1.1.2.14.1.1.1.5 annotation
 		addInfoHelper( x_track , &f_info , "annotation" , "COMMENT" );
 
 		// 4.1.1.2.14.1.1.1.5 album
-		if( cfg_read_no_album )
+		if( cfg_read_album )
 			addInfoHelper( x_track , &f_info , "album" , "ALBUM" );
 
 		// 4.1.1.2.14.1.1.1.9 trackNum
-		if( cfg_read_no_tracknum )
+		if( cfg_read_tracknum )
 			addInfoHelper( x_track , &f_info , "trackNum" , "TRACKNUMBER" );
 
 		// insert into playlist
@@ -359,28 +364,28 @@ void open_helper_no_location( playlist_loader_callback::ptr p_callback , const t
 	bool first = true;
 
 	// 4.1.1.2.14.1.1.1.5 album
-	if( cfg_read_no_album )
+	if( cfg_read_album )
 	{
 		filterFieldHelper( x_track , ( first ? in_list : &list ) , "album" , "ALBUM" , &list , lru_cache );
 		first = false;
 	}
 
 	// 4.1.1.2.14.1.1.1.3 title
-	if( cfg_read_no_title )
+	if( cfg_read_title )
 	{
 		filterFieldHelper( x_track , ( first ? in_list : &list ) , "title" , "TITLE" , &list );
 		first = false;
 	}
 
 	// 4.1.1.2.14.1.1.1.4 creator
-	if( cfg_read_no_creator )
+	if( cfg_read_creator )
 	{
 		filterFieldHelper( x_track , ( first ? in_list : &list ) , "creator" , "ARTIST" , &list );
 		first = false;
 	}
 
 	// 4.1.1.2.14.1.1.1.9 trackNum
-	if( cfg_read_no_tracknum )
+	if( cfg_read_tracknum )
 	{
 		filterFieldHelper( x_track , ( first ? in_list : &list ) , "trackNum" , "TRACKNUMBER" , &list );
 		first = false;

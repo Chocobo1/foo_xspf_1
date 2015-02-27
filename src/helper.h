@@ -38,7 +38,7 @@ class xmlBaseHelper
 	public:
 	void set( const t_size num , const char *val )
 	{
-		if( num >= XMLBASE_LEN )
+		if( num >= XMLBASE_SIZE )
 		{
 			console::printf( CONSOLE_HEADER"xmlBaseHelper::set() num error: %u" , num );
 			return;
@@ -65,8 +65,8 @@ class xmlBaseHelper
 	}
 
 	private:
-	static const t_size XMLBASE_LEN = 4;  // playlist, trackList, track, location
-	T base[XMLBASE_LEN];
+	static const t_size XMLBASE_SIZE = 4;  // playlist, trackList, track, location
+	T base[XMLBASE_SIZE];
 };
 typedef xmlBaseHelper<pfc::string8> xmlBaseImpl;
 
@@ -80,7 +80,7 @@ class lruCache
 	};
 
 	public:
-	explicit lruCache( const t_size limit = 50 ) : CACHE_SIZE( limit )
+	explicit lruCache( const size_t limit = 50 ) : CACHE_SIZE( limit )
 	{
 		return;
 	}
@@ -129,7 +129,7 @@ class lruCache
 	}
 
 	private:
-	const t_size CACHE_SIZE;
+	const size_t CACHE_SIZE;
 	std::list<cacheData> cache;
 };
 typedef lruCache<dbList> lruCacheHandleList;
