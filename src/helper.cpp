@@ -108,7 +108,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	t_size counter = 0;
 	dbList db_list;  // don't call main thread for every <track>
 	trackQueue t_queue;
-	lruCacheImpl lru_cache;
+	lruCacheHandleList lru_cache;
 	for( auto *x_track = x_tracklist->FirstChildElement( "track" ) ; x_track != nullptr ; x_track = x_track->NextSiblingElement( "track" ) )
 	{
 		if( p_abort.is_aborting() )
@@ -221,7 +221,7 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	return;
 }
 
-void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheImpl *lru_cache )
+void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheHandleList *lru_cache )
 {
 	dbList list;
 	bool first = true;
@@ -264,7 +264,7 @@ void open_helper_no_location( playlist_loader_callback::ptr p_callback , const t
 	return;
 }
 
-void open_helper_no_location_2( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheImpl *lru_cache )
+void open_helper_no_location_2( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheHandleList *lru_cache )
 {
 	// try search_tool
 	
@@ -293,21 +293,6 @@ void open_helper_no_location_2( playlist_loader_callback::ptr p_callback , const
 	}
 	return;
 }
-
-
-#if 0
-void remove_karaoke_tracks()
-{
-	search_filter::ptr filter = static_api_ptr_t<search_filter_manager>()->create(
-		"(NOT title HAS \"off vocal\") AND (NOT title HAS \"instrumental\") AND (NOT title HAS \"with out\") AND (NOT title HAS\")" );
-	metadb_handle_ptr_list tracks;
-	static_api_ptr_t<library_manager>()->get_all_items( tracks );
-	pfc::array_staticsize_t<bool> result( tracks.get_count() );
-	filter->test_multi( tracks , result.get_ptr() );
-	tracks.remove_mask( bit_array_table_t( result.get_ptr() , result.get_size() ) );
-	static_api_ptr_t<library_manager>()->remove_items( tracks );
-}
-#endif
 
 
 void write_helper( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort )
@@ -462,7 +447,7 @@ void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , c
 	return;
 }
 
-void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_list , const char *x_name , const char *db_name , dbList *out , lruCacheImpl *lru_cache )
+void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_list , const char *x_name , const char *db_name , dbList *out , lruCacheHandleList *lru_cache )
 {
 	// prepare
 	const auto *x = x_parent->FirstChildElement( x_name );

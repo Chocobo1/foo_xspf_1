@@ -133,7 +133,7 @@ class lruCache
 		const t_size CACHE_SIZE;
 		std::list<cacheData> cache;
 };
-typedef lruCache<dbList> lruCacheImpl;
+typedef lruCache<dbList> lruCacheHandleList;
 
 class mainThreadTask : public main_thread_callback
 {
@@ -152,36 +152,36 @@ class mainThreadTask : public main_thread_callback
 		switch( task_sel )
 		{
 			case 0:
-		{
-			is_library_enabled.set_value( m->is_library_enabled() );
-			break;
-		}
+			{
+				is_library_enabled.set_value( m->is_library_enabled() );
+				break;
+			}
 
 			case 1:
-		{
-			l_1.remove_all();
+			{
+				l_1.remove_all();
 
-			m->get_all_items( l_1 );
-			list_out.set_value( &l_1 );
-			break;
-		}
+				m->get_all_items( l_1 );
+				list_out.set_value( &l_1 );
+				break;
+			}
 
 			case 2:
-		{
-			l_2.remove_all();
+			{
+				l_2.remove_all();
 
-			static_api_ptr_t<playlist_incoming_item_filter> p;
-			p->process_locations( resolve_list_in , l_2 , false , nullptr , nullptr , NULL );
-			resolve_list_out.set_value( &l_2 );
-			resolve_list_in.remove_all();
-			break;
-		}
+				static_api_ptr_t<playlist_incoming_item_filter> p;
+				p->process_locations( resolve_list_in , l_2 , false , nullptr , nullptr , NULL );
+				resolve_list_out.set_value( &l_2 );
+				resolve_list_in.remove_all();
+				break;
+			}
 
 			default:
-		{
-			console::printf( CONSOLE_HEADER"Invalid task_sel: %d" , task_sel );
-			break;
-		}
+			{
+				console::printf( CONSOLE_HEADER"Invalid task_sel: %d" , task_sel );
+				break;
+			}
 		};
 
 		task_sel = -1;
@@ -251,12 +251,12 @@ class trackQueue
 
 void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort );
 void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseImpl *xml_base , trackQueue *queue );
-void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheImpl *lru_cache );
-void open_helper_no_location_2( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheImpl *lru_cache );
+void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheHandleList *lru_cache );
+void open_helper_no_location_2( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheHandleList *lru_cache );
 void write_helper( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort );
 
 void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const char *x_name , const char *db_name );
-void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_list , const char *x_name , const char *db_name , dbList *out , lruCacheImpl *lru_cache = nullptr );
+void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_list , const char *x_name , const char *db_name , dbList *out , lruCacheHandleList *lru_cache = nullptr );
 
 pfc::string8 pathToUri( const char *in_path , const char *ref_path );
 pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 xbase_str );
