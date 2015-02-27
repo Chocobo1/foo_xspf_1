@@ -81,21 +81,26 @@ class lruCache
 		};
 
 	public:
-		void set( const char *in_name , const T *in_data )
+		explicit lruCache(const t_size limit = 50) : CACHE_SIZE(limit)
+		{
+			return;
+		}
+
+		bool set( const char *in_name , const T &in_data )
 		{
 			// check if exist already
 			for( const auto &i : cache )
 			{
 				if( i.name == in_name )
 				{
-					return;
+					return true;
 				}
 			}
 
-			cache.push_front( { in_name , *in_data } );
+			cache.push_front( { in_name , in_data } );
 			if( cache.size() > CACHE_SIZE )
 				cache.pop_back();
-			return;
+			return false;
 		}
 
 		const T *get( const char *in_name )
@@ -112,16 +117,142 @@ class lruCache
 			return nullptr;
 		}
 
+		void remove( const char *in_name )
+		{
+			for( auto i = cache.cbegin() , end = cache.cend() ; i != end ; ++i )
+			{
+				if( i->name == in_name )
+				{
+					cache.erase(i);
+					return;
+				}
+			}
+		}
+
 	private:
-		static const t_size CACHE_SIZE = 50;
+		const t_size CACHE_SIZE;
 		std::list<cacheData> cache;
 };
 typedef lruCache<dbList> lruCacheImpl;
 
+class mainThreadTask : public main_thread_callback
+{
+	public:
+	void add_callback( const int t )
+	{
+		task_sel = t;
+		static_api_ptr_t<main_thread_callback_manager> m;
+		m->add_callback( this );
+		return;
+	}
+
+	void callback_run()  // virtual func overwrite
+	{
+		static_api_ptr_t<library_manager> m;
+		switch( task_sel )
+		{
+			case 0:
+		{
+			is_library_enabled.set_value( m->is_library_enabled() );
+			break;
+		}
+
+			case 1:
+		{
+			l_1.remove_all();
+
+			m->get_all_items( l_1 );
+			list_out.set_value( &l_1 );
+			break;
+		}
+
+			case 2:
+		{
+			l_2.remove_all();
+
+			static_api_ptr_t<playlist_incoming_item_filter> p;
+			p->process_locations( resolve_list_in , l_2 , false , nullptr , nullptr , NULL );
+			resolve_list_out.set_value( &l_2 );
+			resolve_list_in.remove_all();
+			break;
+		}
+
+			default:
+		{
+			console::printf( CONSOLE_HEADER"Invalid task_sel: %d" , task_sel );
+			break;
+		}
+		};
+
+		task_sel = -1;
+		return;
+	}
+
+	// 0
+	std::promise<bool> is_library_enabled;
+
+	// 1
+	std::promise<dbList *> list_out;
+
+	// 2
+	pfc::list_t<const char *> resolve_list_in;
+	std::promise<dbList * > resolve_list_out;
+
+	private:
+	int task_sel = -1;
+
+	// 1
+	dbList l_1;
+
+	// 2
+	dbList l_2;
+};
+
+class trackQueue
+{
+	public:
+	void add( const char *in )
+	{
+		str_list += in;
+		return;
+	}
+
+	void resolve( playlist_loader_callback::ptr p_callback )
+	{
+		// let fb2k handle all input
+
+		if( str_list.get_count() == 0 )
+			return;
+
+		service_ptr_t<mainThreadTask> m_task( new service_impl_t<mainThreadTask>() );
+		for( t_size i = 0 , max = str_list.get_count() ; i < max ; ++i )
+		{
+			m_task->resolve_list_in += str_list.get_item_ref( i );
+		}
+		
+		auto cb_list = m_task->resolve_list_out.get_future();
+		m_task->add_callback( 2 );
+
+		// add
+		const dbList l = *( cb_list.get() );
+		for( t_size i = 0 , max = l.get_count() ; i < max ; ++i )
+		{
+			p_callback->on_entry( l.get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
+		}
+
+		str_list.remove_all();
+		return;
+	}
+
+	private:
+	pfc::list_t<pfc::string8> str_list;
+};
+
 
 void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort );
-void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseImpl *xml_base );
+void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseImpl *xml_base , trackQueue *queue );
 void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheImpl *lru_cache );
+void open_helper_no_location_2( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheImpl *lru_cache );
 void write_helper( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort );
 
 void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const char *x_name , const char *db_name );

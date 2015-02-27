@@ -76,12 +76,18 @@ bool xspf::can_write()
 
 void xspf::open( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort )
 {
+	// avoid file open loop
+	static lruCache<bool> open_list( 65535 );
+	if( open_list.get( p_path ) != nullptr )
+		return;
+	open_list.set( p_path , true );
+
 	pfc::hires_timer t;
 	t.start();
-
 	open_helper( p_path , p_file , p_callback , p_abort );
+	console::printf( CONSOLE_HEADER"Read time: %s, %s" , t.queryString().toString() , p_path );
 
-	console::printf( CONSOLE_HEADER"Read time: %s" , t.queryString().toString() );
+	open_list.remove( p_path );
 	return;
 }
 
@@ -89,9 +95,8 @@ void xspf::write( const char *p_path , const service_ptr_t<file> &p_file , metad
 {
 	pfc::hires_timer t;
 	t.start();
-
 	write_helper( p_path , p_file , p_data , p_abort );
+	console::printf( CONSOLE_HEADER"Write time: %s, %s" , t.queryString().toString() , p_path );
 
-	console::printf( CONSOLE_HEADER"Write time: %s" , t.queryString().toString() );
 	return;
 }

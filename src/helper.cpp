@@ -33,55 +33,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "settings.h"
 
 
-class mainThreadTask : public main_thread_callback
-{
-	public:
-		void add_callback( const int t )
-		{
-			task_sel = t;
-			static_api_ptr_t<main_thread_callback_manager> m;
-			m->add_callback( this );
-			return;
-		}
-
-		void callback_run()
-		{
-			static_api_ptr_t<library_manager> m;
-			switch( task_sel )
-			{
-				case 0:
-				{
-					is_library_enabled.set_value( m->is_library_enabled() );
-					break;
-				}
-
-				case 1:
-				{
-					m->get_all_items( list );
-					list_ptr.set_value( &list );
-					break;
-				}
-
-				default:
-				{
-					console::printf( CONSOLE_HEADER"Invalid task_sel: %d" , task_sel );
-					break;
-				}
-			};
-
-			task_sel = -1;
-			return;
-		}
-
-		std::promise<bool> is_library_enabled;
-		std::promise<dbList *> list_ptr;
-
-	private:
-		dbList list;
-		int task_sel = -1;
-};
-
-
 void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort )
 {
 	// load file
@@ -156,6 +107,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 	// 4.1.1.2.14.1.1 track
 	t_size counter = 0;
 	dbList db_list;  // don't call main thread for every <track>
+	trackQueue t_queue;
 	lruCacheImpl lru_cache;
 	for( auto *x_track = x_tracklist->FirstChildElement( "track" ) ; x_track != nullptr ; x_track = x_track->NextSiblingElement( "track" ) )
 	{
@@ -171,10 +123,12 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 		if( cfg_read_no_location && ( track_location != nullptr ) && ( track_location->GetText() != nullptr ) )
 		{
 			// have location
-			open_helper_location( p_path , p_callback , x_track , &xml_base );
+			open_helper_location( p_path , p_callback , x_track , &xml_base , &t_queue );
 		}
 		else
 		{
+			t_queue.resolve( p_callback );  // to maintain trackList order
+
 			p_callback->on_progress( ( "track " + std::to_string( counter++ ) ).c_str() );
 
 			if( db_list.get_count() == 0 )  // minimize async calls
@@ -194,21 +148,24 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 				}
 
 				// get media library
-				auto list_ptr = m_task->list_ptr.get_future();
+				auto list_ptr = m_task->list_out.get_future();
 				m_task->add_callback( 1 );
 				db_list.move_from( *( list_ptr.get() ) );
 
 				db_list.sort_by_path_quick();
 			}
 
-			open_helper_no_location( p_callback , x_track , &db_list , &lru_cache );
+			//open_helper_no_location( p_callback , x_track , &db_list , &lru_cache );
+			open_helper_no_location_2( p_callback , x_track , &db_list , &lru_cache );
 		}
 	}
+
+	t_queue.resolve( p_callback );
 
 	return;
 }
 
-void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseImpl *xml_base )
+void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseImpl *xml_base , trackQueue *queue )
 {
 	const auto *track_location = x_track->FirstChildElement( "location" );
 
@@ -216,7 +173,6 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 	const char *track_location_base = track_location->Attribute( "xml:base" );
 	xml_base->set( 3 , track_location_base );
 
-	// ONLY HANDLE PLAYABLE FILES OR URLS, LINKING TO ANOTHER PLAYLIST IS NOT SUPPORTED
 	const pfc::string8 out_str = uriToPath( track_location->GetText() , p_path , xml_base->get() );
 	if( out_str.is_empty() )
 	{
@@ -224,34 +180,44 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 		return;
 	}
 
-	// file info variables
-	file_info_impl f_info;
-	metadb_handle_ptr f_handle;
-	p_callback->on_progress( out_str );
-	p_callback->handle_create( f_handle , make_playable_location( out_str , 0 ) );
+	// read <location> as is
+	if( cfg_read_no_resolve_loc )
+	{
+		// file info variables
+		file_info_impl f_info;
+		metadb_handle_ptr f_handle;
 
-	// 4.1.1.2.14.1.1.1.3 title
-	if( cfg_read_no_title )
-		addInfoHelper( x_track , &f_info , "title" , "TITLE" );
+		p_callback->on_progress( out_str );
+		p_callback->handle_create( f_handle , make_playable_location( out_str , 0 ) );
 
-	// 4.1.1.2.14.1.1.1.4 creator
-	if( cfg_read_no_creator )
-		addInfoHelper( x_track , &f_info , "creator" , "ARTIST" );
+		// 4.1.1.2.14.1.1.1.3 title
+		if( cfg_read_no_title )
+			addInfoHelper( x_track , &f_info , "title" , "TITLE" );
 
-	// 4.1.1.2.14.1.1.1.5 annotation
-	addInfoHelper( x_track , &f_info , "annotation" , "COMMENT" );
+		// 4.1.1.2.14.1.1.1.4 creator
+		if( cfg_read_no_creator )
+			addInfoHelper( x_track , &f_info , "creator" , "ARTIST" );
 
-	// 4.1.1.2.14.1.1.1.5 album
-	if( cfg_read_no_album )
-		addInfoHelper( x_track , &f_info , "album" , "ALBUM" );
+		// 4.1.1.2.14.1.1.1.5 annotation
+		addInfoHelper( x_track , &f_info , "annotation" , "COMMENT" );
 
-	// 4.1.1.2.14.1.1.1.9 trackNum
-	if( cfg_read_no_tracknum )
-		addInfoHelper( x_track , &f_info , "trackNum" , "TRACKNUMBER" );
+		// 4.1.1.2.14.1.1.1.5 album
+		if( cfg_read_no_album )
+			addInfoHelper( x_track , &f_info , "album" , "ALBUM" );
 
-	// insert into playlist
-	p_callback->on_entry_info( f_handle , playlist_loader_callback::entry_user_requested , filestats_invalid , f_info , false );
+		// 4.1.1.2.14.1.1.1.9 trackNum
+		if( cfg_read_no_tracknum )
+			addInfoHelper( x_track , &f_info , "trackNum" , "TRACKNUMBER" );
 
+		// insert into playlist
+		p_callback->on_entry_info( f_handle , playlist_loader_callback::entry_user_requested , filestats_invalid , f_info , false );
+
+		return;
+	}
+
+	// TODO: search in metadb to speed up
+
+	queue->add( out_str );
 	return;
 }
 
@@ -297,6 +263,52 @@ void open_helper_no_location( playlist_loader_callback::ptr p_callback , const t
 
 	return;
 }
+
+void open_helper_no_location_2( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheImpl *lru_cache )
+{
+	// try search_tool
+	
+	// prepare
+	const auto *x = x_track->FirstChildElement( "title" );
+	if( x == nullptr )
+		return;
+	const char *x_field = x->GetText();
+	if( x_field == nullptr )
+		return;
+
+	pfc::string8 ttt = "title HAS ";
+	ttt += x_field;
+//	ttt += "\"";
+	const auto kkk = static_api_ptr_t<search_filter_manager>()->create( ttt.toString() );
+	pfc::array_staticsize_t<bool> result( in_list->get_count() );
+	
+	kkk->test_multi( *in_list , result.get_ptr() );
+	for( t_size i = 0 , max = in_list->get_count() ; i < max ; ++i )
+	{
+		if( result[i] )
+		{
+			p_callback->on_entry( in_list->get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
+			break;
+		}
+	}
+	return;
+}
+
+
+#if 0
+void remove_karaoke_tracks()
+{
+	search_filter::ptr filter = static_api_ptr_t<search_filter_manager>()->create(
+		"(NOT title HAS \"off vocal\") AND (NOT title HAS \"instrumental\") AND (NOT title HAS \"with out\") AND (NOT title HAS\")" );
+	metadb_handle_ptr_list tracks;
+	static_api_ptr_t<library_manager>()->get_all_items( tracks );
+	pfc::array_staticsize_t<bool> result( tracks.get_count() );
+	filter->test_multi( tracks , result.get_ptr() );
+	tracks.remove_mask( bit_array_table_t( result.get_ptr() , result.get_size() ) );
+	static_api_ptr_t<library_manager>()->remove_items( tracks );
+}
+#endif
+
 
 void write_helper( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort )
 {
@@ -503,7 +515,7 @@ void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_
 	if( lru_cache != nullptr && list == in_list )
 	{
 		// entry not in cache
-		lru_cache->set( x_field , &tmp_list );
+		lru_cache->set( x_field , tmp_list );
 	}
 
 	out->move_from( tmp_list );
@@ -554,8 +566,8 @@ pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::s
 
 	// check "file:" scheme
 	pfc::string8 in_str = urlDecodeUtf8( in_uri );
-	const bool is_local = in_str.has_prefix( "file:" );
-	if( is_local )
+	const bool local = in_str.has_prefix( "file:" );
+	if( local )
 	{
 		// prepare
 		in_str.replace_string( "file:///" , "" );
