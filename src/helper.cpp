@@ -28,11 +28,143 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+// includes
 #include "stdafx.h"
 #include "helper.h"
 #include "settings.h"
 
+// classes, typedefs
+class mainThreadTask : public main_thread_callback
+{
+	public:
+	void add_callback( const int t )
+	{
+		task_sel = t;
+		static_api_ptr_t<main_thread_callback_manager> m;
+		m->add_callback( this );
+		return;
+	}
 
+	void callback_run()  // virtual func overwrite
+	{
+		static_api_ptr_t<library_manager> m;
+		switch( task_sel )
+		{
+			case 0:
+			{
+				is_library_enabled.set_value( m->is_library_enabled() );
+				break;
+			}
+
+			case 1:
+			{
+				l_1.remove_all();
+
+				m->get_all_items( l_1 );
+				list_out.set_value( &l_1 );
+				break;
+			}
+
+			case 2:
+			{
+				l_2.remove_all();
+
+				static_api_ptr_t<playlist_incoming_item_filter> p;
+				p->process_locations( resolve_list_in , l_2 , false , nullptr , nullptr , NULL );
+				resolve_list_out.set_value( &l_2 );
+				resolve_list_in.remove_all();
+				break;
+			}
+
+			default:
+			{
+				console::printf( CONSOLE_HEADER"Invalid task_sel: %d" , task_sel );
+				break;
+			}
+		};
+
+		task_sel = -1;
+		return;
+	}
+
+	// 0
+	std::promise<bool> is_library_enabled;
+
+	// 1
+	std::promise<dbList *> list_out;
+
+	// 2
+	pfc::list_t<const char *> resolve_list_in;
+	std::promise<dbList * > resolve_list_out;
+
+	private:
+	int task_sel = -1;
+
+	// 1
+	dbList l_1;
+
+	// 2
+	dbList l_2;
+};
+
+class trackQueue
+{
+	public:
+	void add( const char *in )
+	{
+		str_list += in;
+		return;
+	}
+
+	void resolve( playlist_loader_callback::ptr p_callback )
+	{
+		// let fb2k handle all input
+
+		if( str_list.get_count() == 0 )
+			return;
+
+		service_ptr_t<mainThreadTask> m_task( new service_impl_t<mainThreadTask>() );
+		for( t_size i = 0 , max = str_list.get_count() ; i < max ; ++i )
+		{
+			const char *tmp = str_list.get_item_ref( i );
+			m_task->resolve_list_in += tmp;
+			p_callback->on_progress( tmp );
+		}
+
+		auto cb_list = m_task->resolve_list_out.get_future();
+		m_task->add_callback( 2 );
+
+		// add
+		const dbList l = *( cb_list.get() );
+		for( t_size i = 0 , max = l.get_count() ; i < max ; ++i )
+		{
+			p_callback->on_entry( l.get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
+		}
+
+		str_list.remove_all();
+		return;
+	}
+
+	private:
+	pfc::list_t<pfc::string8> str_list;
+};
+
+
+// prototypes
+void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseImpl *xml_base , trackQueue *queue );
+void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheHandleList *lru_cache );
+
+void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const char *x_name , const char *db_name );
+void filterFieldHelper( const tinyxml2::XMLElement *x_parent , const dbList *in_list , const char *x_name , const char *db_name , dbList *out , lruCacheHandleList *lru_cache = nullptr );
+
+pfc::string8 pathToUri( const char *in_path , const char *ref_path );
+pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 xbase_str );
+
+pfc::string8 urlEncodeUtf8( const char *in );
+pfc::string8 urlDecodeUtf8( const char *in );
+
+
+// functions
 void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort )
 {
 	// load file
