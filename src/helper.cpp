@@ -155,8 +155,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 				db_list.sort_by_path_quick();
 			}
 
-			//open_helper_no_location( p_callback , x_track , &db_list , &lru_cache );
-			open_helper_no_location_2( p_callback , x_track , &db_list , &lru_cache );
+			open_helper_no_location( p_callback , x_track , &db_list , &lru_cache );
 		}
 	}
 
@@ -217,6 +216,7 @@ void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_
 
 	// TODO: search in metadb to speed up
 
+	// add to queue for later batch process
 	queue->add( out_str );
 	return;
 }
@@ -263,37 +263,6 @@ void open_helper_no_location( playlist_loader_callback::ptr p_callback , const t
 
 	return;
 }
-
-void open_helper_no_location_2( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheHandleList *lru_cache )
-{
-	// try search_tool
-	
-	// prepare
-	const auto *x = x_track->FirstChildElement( "title" );
-	if( x == nullptr )
-		return;
-	const char *x_field = x->GetText();
-	if( x_field == nullptr )
-		return;
-
-	pfc::string8 ttt = "title HAS ";
-	ttt += x_field;
-//	ttt += "\"";
-	const auto kkk = static_api_ptr_t<search_filter_manager>()->create( ttt.toString() );
-	pfc::array_staticsize_t<bool> result( in_list->get_count() );
-	
-	kkk->test_multi( *in_list , result.get_ptr() );
-	for( t_size i = 0 , max = in_list->get_count() ; i < max ; ++i )
-	{
-		if( result[i] )
-		{
-			p_callback->on_entry( in_list->get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
-			break;
-		}
-	}
-	return;
-}
-
 
 void write_helper( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort )
 {

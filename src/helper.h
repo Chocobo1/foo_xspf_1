@@ -227,7 +227,9 @@ class trackQueue
 		service_ptr_t<mainThreadTask> m_task( new service_impl_t<mainThreadTask>() );
 		for( t_size i = 0 , max = str_list.get_count() ; i < max ; ++i )
 		{
-			m_task->resolve_list_in += str_list.get_item_ref( i );
+			const char *tmp = str_list.get_item_ref( i );
+			m_task->resolve_list_in += tmp;
+			p_callback->on_progress( tmp );
 		}
 		
 		auto cb_list = m_task->resolve_list_out.get_future();
@@ -252,7 +254,6 @@ class trackQueue
 void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort );
 void open_helper_location( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , xmlBaseImpl *xml_base , trackQueue *queue );
 void open_helper_no_location( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheHandleList *lru_cache );
-void open_helper_no_location_2( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const dbList *in_list , lruCacheHandleList *lru_cache );
 void write_helper( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort );
 
 void addInfoHelper( const tinyxml2::XMLElement *x_parent , file_info_impl *f , const char *x_name , const char *db_name );

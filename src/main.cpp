@@ -84,6 +84,7 @@ void xspf::open( const char *p_path , const service_ptr_t<file> &p_file , playli
 
 	pfc::hires_timer t;
 	t.start();
+	p_callback->on_progress( p_path );
 	open_helper( p_path , p_file , p_callback , p_abort );
 	console::printf( CONSOLE_HEADER"Read time: %s, %s" , t.queryString().toString() , p_path );
 
