@@ -466,6 +466,10 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 				xAddMeta( &x , x_track , "duration" , str.c_str() );
 			}
 		}
+
+		// remove track if no info is added
+		if( x_track->FirstChildElement() == nullptr )
+			x.DeleteNode( x_track );
 	}
 
 	// output
