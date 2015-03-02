@@ -30,7 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "stdafx.h"
 #include "main.h"
-#include "helper.h"
 
 
 #define PLUGIN_NAME "XSPF Playlist"
@@ -77,10 +76,9 @@ bool xspf::can_write()
 void xspf::open( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort )
 {
 	// avoid file open loop
-	static LruCache<bool> file_list( FILE_OPEN_MAX );
-	if( file_list.get( p_path ) != nullptr )
+	if( file_list.find( p_path ) != file_list.cend() )
 		return;
-	file_list.set( p_path , true );
+	file_list.emplace( p_path );
 
 	pfc::hires_timer t;
 	t.start();
@@ -91,12 +89,12 @@ void xspf::open( const char *p_path , const service_ptr_t<file> &p_file , playli
 	}
 	catch( ... )
 	{
-		file_list.remove( p_path );
+		file_list.erase( p_path );
 		throw;
 	}
 	console::printf( CONSOLE_HEADER"Read time: %s, %s" , t.queryString().toString() , p_path );
 
-	file_list.remove( p_path );
+	file_list.erase( p_path );
 	return;
 }
 

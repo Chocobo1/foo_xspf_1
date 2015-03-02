@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
+#include <set>
 #include <list>
 #include <ctime>
 #include <future>
@@ -40,4 +41,3 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../lib/tinyxml2/tinyxml2.h"
 
 #define CONSOLE_HEADER "foo_xspf_1: "
-const t_size FILE_OPEN_MAX = 65535;

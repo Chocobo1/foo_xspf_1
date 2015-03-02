@@ -110,18 +110,6 @@ class LruCache
 			return nullptr;
 		}
 
-		void remove( const char *in_name )
-		{
-			for( auto i = cache.cbegin() , end = cache.cend() ; i != end ; ++i )
-			{
-				if( i->name == in_name )
-				{
-					cache.erase( i );
-					return;
-				}
-			}
-		}
-
 	private:
 		const size_t CACHE_SIZE;
 		std::list<cacheData> cache;

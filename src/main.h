@@ -30,6 +30,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
+#include "helper.h"
+
 // XSPF spec: http://www.xspf.org/xspf-v1.html
 class xspf : public playlist_loader
 {
@@ -41,6 +43,11 @@ class xspf : public playlist_loader
 
 		void open( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort );
 		void write( const char *p_path , const service_ptr_t<file> &p_file , metadb_handle_list_cref p_data , abort_callback &p_abort );
+
+	private:
+		static std::set<std::string> file_list;
 };
+std::set<std::string> xspf::file_list;
+
 // instance
 playlist_loader_factory_t<xspf> xspf_main;
