@@ -37,7 +37,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class MainThreadTask : public main_thread_callback
 {
 	public:
-		void add_callback( const int t )
+		enum class Task
+		{
+			IS_LIBRARY_ENABLED,
+			GET_ALL_LIBRARY,
+			PROCESS_LOCATIONS,
+			TASK_MAX
+		};
+
+		void add_callback( const Task t )
 		{
 			task_sel = t;
 			static_api_ptr_t<main_thread_callback_manager> m;
@@ -50,14 +58,14 @@ class MainThreadTask : public main_thread_callback
 			// main thread runs here
 			switch( task_sel )
 			{
-				case 0:
+				case Task::IS_LIBRARY_ENABLED:
 				{
 					static_api_ptr_t<library_manager> m;
 					is_library_enabled.set_value( m->is_library_enabled() );
 					break;
 				}
 
-				case 1:
+				case Task::GET_ALL_LIBRARY:
 				{
 					l_1.remove_all();
 
@@ -67,7 +75,7 @@ class MainThreadTask : public main_thread_callback
 					break;
 				}
 
-				case 2:
+				case Task::PROCESS_LOCATIONS:
 				{
 					l_2.remove_all();
 
@@ -84,27 +92,27 @@ class MainThreadTask : public main_thread_callback
 				}
 			};
 
-			task_sel = -1;
+			task_sel = Task::TASK_MAX;
 			return;
 		}
 
-		// 0
+		// Task::IS_LIBRARY_ENABLED
 		std::promise<bool> is_library_enabled;
 
-		// 1
+		// Task::GET_ALL_LIBRARY
 		std::promise<DbList *> list_out;
 
-		// 2
+		// Task::PROCESS_LOCATIONS
 		pfc::list_t<const char *> resolve_list_in;
 		std::promise<DbList * > resolve_list_out;
 
 	private:
-		int task_sel = -1;
+	Task task_sel = Task::TASK_MAX;
 
-		// 1
+		// Task::GET_ALL_LIBRARY
 		DbList l_1;
 
-		// 2
+		// Task::PROCESS_LOCATIONS
 		DbList l_2;
 };
 
@@ -140,7 +148,7 @@ class TrackQueue
 				p_callback->on_progress( tmp );
 			}
 			auto cb_list = m_task->resolve_list_out.get_future();
-			m_task->add_callback( 2 );
+			m_task->add_callback( MainThreadTask::Task::PROCESS_LOCATIONS );
 
 			// add
 			const DbList l = *( cb_list.get() );
@@ -250,6 +258,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 
 			p_callback->on_progress( ("track " + std::to_string( counter++ )).c_str() );
 
+			// library_manager class could only be used in main thread, here is worker thread
 			const bool is_init_ok = initDbListHelper( &db_list );
 			if( !is_init_ok )
 				return;
@@ -501,7 +510,7 @@ bool initDbListHelper( DbList *l )
 
 		// get library status
 		auto is_library = m_task->is_library_enabled.get_future();
-		m_task->add_callback( 0 );
+		m_task->add_callback( MainThreadTask::Task::IS_LIBRARY_ENABLED );
 		if( !is_library.get() )
 		{
 			console::printf( CONSOLE_HEADER"Media library is not enabled, please configure it first" );
@@ -510,7 +519,7 @@ bool initDbListHelper( DbList *l )
 
 		// get media library
 		auto list_ptr = m_task->list_out.get_future();
-		m_task->add_callback( 1 );
+		m_task->add_callback( MainThreadTask::Task::GET_ALL_LIBRARY );
 		l->move_from( *( list_ptr.get() ) );
 		l->sort_by_path_quick();
 	}
