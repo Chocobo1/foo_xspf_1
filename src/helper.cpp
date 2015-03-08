@@ -566,10 +566,13 @@ void filterFieldHelper( DbList *out , const tinyxml2::XMLElement *x , const char
 		}
 
 		// try partial match
-		const bool p_match = ( strstr( str , x_str ) != nullptr ) ? true : false;
-		if( p_match )
+		if( cfg_read_partial_match )
 		{
-			out_list += item;
+			const bool p_match = ( strstr( str , x_str ) != nullptr ) ? true : false;
+			if( p_match )
+			{
+				out_list += item;
+			}
 		}
 	}
 
