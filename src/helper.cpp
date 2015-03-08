@@ -176,7 +176,6 @@ class TrackInfoCache
 			if( lib_list.get_count() != 0 )
 				return true;
 
-
 			// get library status
 			{
 				service_ptr_t<MainThreadTask> m_task( new service_impl_t<MainThreadTask>( MainThreadTask::Task::IS_LIBRARY_ENABLED ) );
