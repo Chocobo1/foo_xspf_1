@@ -107,7 +107,7 @@ class MainThreadTask : public main_thread_callback
 		std::promise<DbList * > resolve_list_out;
 
 	private:
-	Task task_sel = Task::TASK_MAX;
+		Task task_sel = Task::TASK_MAX;
 
 		// Task::GET_ALL_LIBRARY
 		DbList l_1;
@@ -165,14 +165,122 @@ class TrackQueue
 		pfc::list_t<pfc::string8> str_list;
 };
 
+class TrackInfoCache
+{
+	public:
+		bool init()
+		{
+			if( lib_list.get_count() != 0 )
+				return true;
+
+			service_ptr_t<MainThreadTask> m_task( new service_impl_t<MainThreadTask>() );
+
+			// get library status
+			auto is_library = m_task->is_library_enabled.get_future();
+			m_task->add_callback( MainThreadTask::Task::IS_LIBRARY_ENABLED );
+			if( !is_library.get() )
+				return false;
+
+			// get media library
+			auto list_ptr = m_task->list_out.get_future();
+			m_task->add_callback( MainThreadTask::Task::GET_ALL_LIBRARY );
+			lib_list.move_from( *( list_ptr.get() ) );
+			lib_list.sort_by_path_quick();
+
+			return true;
+		}
+
+		void reset()
+		{
+			session_list.remove_all();
+			is_first = true;
+			return;
+		}
+
+		const DbList *getList() const
+		{
+			return &session_list;
+		}
+
+		void filter( const char *x_name , const char *x_val , const char *meta_name , const bool use_cache )
+		{
+			const DbList *list = &lib_list;  // the "list" operates on
+			if( !is_first )
+			{
+				list = &session_list;
+			}
+
+			if( use_cache && is_first )
+			{
+				// search for "type name"
+				const auto i = cache_map.find( x_name );
+				if( i != cache_map.end() )
+				{
+					// search for existing result
+					const DbList *j = ( i->second ).get( x_val );
+					if( j != nullptr )
+					{
+						list = j;
+					}
+				}
+			}
+
+			// scan through list
+			DbList out;
+			for( t_size i = 0 , max = list->get_count() , j = 0 ; i < max ; ++i )
+			{
+				// get meta string from db
+				const auto item = list->get_item_ref( i );
+				const auto info = item->get_async_info_ref();
+				const char *str = info->info().meta_get( meta_name , 0 );
+				if( str == nullptr )
+					continue;
+
+				// try exact match
+				const bool e_match = ( strcmp( str , x_val ) == 0 ) ? true : false;
+				if( e_match )
+				{
+					out.insert_item( item , j++ );  // put it at front
+					continue;
+				}
+
+				// try partial match
+				if( cfg_read_partial_match )
+				{
+					const bool p_match = ( strstr( str , x_val ) != nullptr ) ? true : false;
+					if( p_match )
+					{
+						out += item;
+					}
+				}
+			}
+
+			if( use_cache && is_first )
+			{
+				// store back results
+				auto i = cache_map[x_name];  // get reference
+				i.set( x_val , out );
+			}
+
+			session_list.move_from( out );
+			is_first = false;
+			return;
+		}
+
+	private:
+		DbList lib_list;
+		std::map<std::string , LruCacheHandleList> cache_map;
+
+		DbList session_list;
+		bool is_first = true;
+};
+
 
 // prototypes
 void openHelperLocation( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , XmlBaseImpl *xml_base , TrackQueue *queue );
-void openHelperNoLocation( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const DbList *in_list , LruCacheHandleList *lru_cache );
+void openHelperNoLocation( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , TrackInfoCache *track_cache );
 
-bool initDbListHelper( DbList *l );
 void addInfoHelper( file_info_impl *f , const char *meta_name , const tinyxml2::XMLElement *x , const char *e_name );
-void filterFieldHelper( DbList *out , const tinyxml2::XMLElement *x , const char *e_name , const DbList *in_list , const char *meta_name , LruCacheHandleList *lru_cache = nullptr );
 
 tinyxml2::XMLElement *xAddElement( tinyxml2::XMLDocument *x_doc , tinyxml2::XMLNode *x_parent , const char *e_name );
 void xAddMeta( tinyxml2::XMLDocument *x_doc , tinyxml2::XMLNode *x_parent , const char *e_name , const char *meta_text );
@@ -233,9 +341,8 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 
 	// 4.1.1.2.14.1.1 track
 	t_size counter = 0;
-	DbList db_list;  // don't call main thread for every <track>
 	TrackQueue t_queue;
-	LruCacheHandleList lru_cache;
+	TrackInfoCache track_cache;
 	for( auto *x_track = x_tracklist->FirstChildElement( "track" ) ; x_track != nullptr ; x_track = x_track->NextSiblingElement( "track" ) )
 	{
 		if( p_abort.is_aborting() )
@@ -258,12 +365,13 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 
 			p_callback->on_progress( ("track " + std::to_string( counter++ )).c_str() );
 
-			// library_manager class could only be used in main thread, here is worker thread
-			const bool is_init_ok = initDbListHelper( &db_list );
-			if( !is_init_ok )
+			const bool if_lib = track_cache.init();
+			if( !if_lib )
+			{
+				console::printf( CONSOLE_HEADER"Media library is not enabled, please configure it first" );
 				return;
-
-			openHelperNoLocation( p_callback , x_track , &db_list , &lru_cache );
+			}
+			openHelperNoLocation( p_callback , x_track , &track_cache );
 		}
 	}
 
@@ -329,46 +437,50 @@ void openHelperLocation( const char *p_path , playlist_loader_callback::ptr p_ca
 	return;
 }
 
-void openHelperNoLocation( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , const DbList *in_list , LruCacheHandleList *lru_cache )
+void openHelperNoLocation( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , TrackInfoCache *track_cache )
 {
-	DbList list;
-	bool is_first = true;
-
 	// 4.1.1.2.14.1.1.1.5 album
 	if( cfg_read_album )
 	{
-		filterFieldHelper( &list , x_track , "album" , ( is_first ? in_list : &list ) , "ALBUM" , lru_cache );
-		is_first = false;
+		const char *x_str = xGetChildElementText( x_track , "album" );
+		if( x_str != nullptr )
+			track_cache->filter( "album" , x_str , "ALBUM" , true );
 	}
 
 	// 4.1.1.2.14.1.1.1.3 title
 	if( cfg_read_title )
 	{
-		filterFieldHelper( &list , x_track , "title" , ( is_first ? in_list : &list ) , "TITLE" );
-		is_first = false;
+		const char *x_str = xGetChildElementText( x_track , "title" );
+		if( x_str != nullptr )
+			track_cache->filter( "title" , x_str , "TITLE" , false );
 	}
 
 	// 4.1.1.2.14.1.1.1.4 creator
 	if( cfg_read_creator )
 	{
-		filterFieldHelper( &list , x_track , "creator" , ( is_first ? in_list : &list ) , "ARTIST" );
-		is_first = false;
+		const char *x_str = xGetChildElementText( x_track , "creator" );
+		if( x_str != nullptr )
+			track_cache->filter( "creator" , x_str , "ARTIST" , false );
 	}
 
 	// 4.1.1.2.14.1.1.1.9 trackNum
 	if( cfg_read_tracknum )
 	{
-		filterFieldHelper( &list , x_track , "trackNum" , ( is_first ? in_list : &list ) , "TRACKNUMBER" );
-		is_first = false;
+		const char *x_str = xGetChildElementText( x_track , "trackNum" );
+		if( x_str != nullptr )
+			track_cache->filter( "trackNum" , x_str , "TRACKNUMBER" , true );
 	}
 
 	// add result
-	const t_size max = ( cfg_read_mulitple_match ? list.get_count() : pfc::min_t<t_size>( 1 , list.get_count() ) );
+	const auto list = track_cache->getList();
+	const t_size list_size = list->get_count();
+	const t_size max = ( cfg_read_mulitple_match ? list_size : pfc::min_t<t_size>( 1 , list_size ) );
 	for( t_size i = 0 ; i < max ; ++i )
 	{
-		p_callback->on_entry( list.get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
+		p_callback->on_entry( list->get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
 	}
-
+	
+	track_cache->reset();
 	return;
 }
 
@@ -499,34 +611,6 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 }
 
 
-bool initDbListHelper( DbList *l )
-{
-	// return false when fail: metadb is not enabled/configured
-
-	if( l->get_count() == 0 )
-	{
-		// library_manager class could only be used in main thread, here is worker thread
-		service_ptr_t<MainThreadTask> m_task( new service_impl_t<MainThreadTask>() );
-
-		// get library status
-		auto is_library = m_task->is_library_enabled.get_future();
-		m_task->add_callback( MainThreadTask::Task::IS_LIBRARY_ENABLED );
-		if( !is_library.get() )
-		{
-			console::printf( CONSOLE_HEADER"Media library is not enabled, please configure it first" );
-			return false;
-		}
-
-		// get media library
-		auto list_ptr = m_task->list_out.get_future();
-		m_task->add_callback( MainThreadTask::Task::GET_ALL_LIBRARY );
-		l->move_from( *( list_ptr.get() ) );
-		l->sort_by_path_quick();
-	}
-
-	return true;
-}
-
 void addInfoHelper( file_info_impl *f , const char *meta_name , const tinyxml2::XMLElement *x , const char* e_name )
 {
 	const char *str = xGetChildElementText( x , e_name );
@@ -534,65 +618,6 @@ void addInfoHelper( file_info_impl *f , const char *meta_name , const tinyxml2::
 	{
 		f->meta_add( meta_name , str );
 	}
-	return;
-}
-
-void filterFieldHelper( DbList *out , const tinyxml2::XMLElement *x , const char *e_name , const DbList *in_list , const char *meta_name , LruCacheHandleList *lru_cache )
-{
-	// prepare
-	const char *x_str = xGetChildElementText( x , e_name );
-	if( x_str == nullptr )
-		return;
-
-	// use cache
-	const DbList *list = in_list;
-	if( lru_cache != nullptr )
-	{
-		const DbList *t = lru_cache->get( x_str );
-		if( t != nullptr )
-		{
-			list = t;
-		}
-	}
-
-	// scan through list
-	DbList out_list;
-	for( t_size i = 0 , max = list->get_count() , j = 0 ; i < max ; ++i )
-	{
-		// get meta string from db
-		const auto item = list->get_item_ref( i );
-		const auto info = item->get_async_info_ref();
-		const char *str = info->info().meta_get( meta_name , 0 );
-		if( str == nullptr )
-			continue;
-
-		// try exact match
-		const bool e_match = ( strcmp( str , x_str ) == 0 ) ? true : false;
-		if( e_match )
-		{
-			out_list.insert_item( item , j++ );  // put it at front
-			continue;
-		}
-
-		// try partial match
-		if( cfg_read_partial_match )
-		{
-			const bool p_match = ( strstr( str , x_str ) != nullptr ) ? true : false;
-			if( p_match )
-			{
-				out_list += item;
-			}
-		}
-	}
-
-	// update cache
-	if( lru_cache != nullptr && list == in_list )
-	{
-		// entry not in cache
-		lru_cache->set( x_str , out_list );
-	}
-
-	out->move_from( out_list );
 	return;
 }
 
