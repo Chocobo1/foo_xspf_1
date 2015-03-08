@@ -157,7 +157,7 @@ class TrackQueue
 				p_callback->on_entry( l.get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
 			}
 
-			reset();
+			this->reset();
 			return;
 		}
 
@@ -361,9 +361,7 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 		}
 		else
 		{
-			t_queue.resolve( p_callback );  // to maintain trackList order
-
-			p_callback->on_progress( ("track " + std::to_string( counter++ )).c_str() );
+			t_queue.resolve( p_callback );  // maintain trackList order
 
 			const bool if_lib = track_cache.init();
 			if( !if_lib )
@@ -371,6 +369,9 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 				console::printf( CONSOLE_HEADER"Media library is not enabled, please configure it first" );
 				return;
 			}
+
+			p_callback->on_progress( ( "track " + std::to_string( counter++ ) ).c_str() );
+
 			openHelperNoLocation( p_callback , x_track , &track_cache );
 		}
 	}
