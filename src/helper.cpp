@@ -45,9 +45,13 @@ class MainThreadTask : public main_thread_callback
 			TASK_MAX
 		};
 
-		void add_callback( const Task t )
+		explicit MainThreadTask( const Task t ) : task_sel( t )
 		{
-			task_sel = t;
+			return;
+		}
+
+		void add_callback()
+		{
 			static_api_ptr_t<main_thread_callback_manager> m;
 			m->add_callback( this );
 			return;
@@ -92,7 +96,6 @@ class MainThreadTask : public main_thread_callback
 				}
 			};
 
-			task_sel = Task::TASK_MAX;
 			return;
 		}
 
@@ -107,7 +110,7 @@ class MainThreadTask : public main_thread_callback
 		std::promise<DbList * > resolve_list_out;
 
 	private:
-		Task task_sel = Task::TASK_MAX;
+		const Task task_sel;
 
 		// Task::GET_ALL_LIBRARY
 		DbList l_1;
@@ -138,7 +141,7 @@ class TrackQueue
 			if( str_list.get_count() == 0 )
 				return;
 
-			service_ptr_t<MainThreadTask> m_task( new service_impl_t<MainThreadTask>() );
+			service_ptr_t<MainThreadTask> m_task( new service_impl_t<MainThreadTask>( MainThreadTask::Task::PROCESS_LOCATIONS ) );
 
 			m_task->resolve_list_in.remove_all();
 			for( t_size i = 0 , max = str_list.get_count() ; i < max ; ++i )
@@ -148,7 +151,7 @@ class TrackQueue
 				p_callback->on_progress( tmp );
 			}
 			auto cb_list = m_task->resolve_list_out.get_future();
-			m_task->add_callback( MainThreadTask::Task::PROCESS_LOCATIONS );
+			m_task->add_callback();
 
 			// add
 			const DbList l = *( cb_list.get() );
@@ -173,19 +176,24 @@ class TrackInfoCache
 			if( lib_list.get_count() != 0 )
 				return true;
 
-			service_ptr_t<MainThreadTask> m_task( new service_impl_t<MainThreadTask>() );
 
 			// get library status
-			auto is_library = m_task->is_library_enabled.get_future();
-			m_task->add_callback( MainThreadTask::Task::IS_LIBRARY_ENABLED );
-			if( !is_library.get() )
-				return false;
+			{
+				service_ptr_t<MainThreadTask> m_task( new service_impl_t<MainThreadTask>( MainThreadTask::Task::IS_LIBRARY_ENABLED ) );
+				auto is_library = m_task->is_library_enabled.get_future();
+				m_task->add_callback();
+				if( !is_library.get() )
+					return false;
+			}
 
 			// get media library
-			auto list_ptr = m_task->list_out.get_future();
-			m_task->add_callback( MainThreadTask::Task::GET_ALL_LIBRARY );
-			lib_list.move_from( *( list_ptr.get() ) );
-			lib_list.sort_by_path_quick();
+			{
+				service_ptr_t<MainThreadTask> m_task( new service_impl_t<MainThreadTask>( MainThreadTask::Task::GET_ALL_LIBRARY ) );
+				auto list_ptr = m_task->list_out.get_future();
+				m_task->add_callback();
+				lib_list.move_from( *( list_ptr.get() ) );
+				lib_list.sort_by_path_quick();
+			}
 
 			return true;
 		}
