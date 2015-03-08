@@ -67,7 +67,7 @@ typedef XmlBaseHelper<pfc::string8> XmlBaseImpl;
 template<class T>
 class LruCache
 {
-	struct cacheData
+	struct CacheData
 	{
 		std::string name;
 		T data;
@@ -112,7 +112,7 @@ class LruCache
 
 	private:
 		const size_t CACHE_SIZE;
-		std::list<cacheData> cache;
+		std::list<CacheData> cache;
 };
 typedef LruCache<DbList> LruCacheHandleList;
 
