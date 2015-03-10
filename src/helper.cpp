@@ -171,21 +171,18 @@ class TrackQueue
 class TrackInfoCache
 {
 	public:
-		bool init()
+		explicit TrackInfoCache()
 		{
-			if( lib_list.get_count() != 0 )
-				return true;
-
 			// get library status
 			{
 				service_ptr_t<MainThreadTask> m_task( new service_impl_t<MainThreadTask>( MainThreadTask::Task::IS_LIBRARY_ENABLED ) );
-				auto is_library = m_task->is_library_enabled.get_future();
+				auto h_library = m_task->is_library_enabled.get_future();
 				m_task->add_callback();
-				if( !is_library.get() )
-					return false;
+				have_library = h_library.get();
 			}
 
 			// get media library
+			if( have_library && ( lib_list.get_count() == 0 ) )
 			{
 				service_ptr_t<MainThreadTask> m_task( new service_impl_t<MainThreadTask>( MainThreadTask::Task::GET_ALL_LIBRARY ) );
 				auto list_ptr = m_task->list_out.get_future();
@@ -194,7 +191,7 @@ class TrackInfoCache
 				lib_list.sort_by_path_quick();
 			}
 
-			return true;
+			return;
 		}
 
 		void reset()
@@ -202,11 +199,6 @@ class TrackInfoCache
 			session_list.remove_all();
 			is_first = true;
 			return;
-		}
-
-		const DbList *getList() const
-		{
-			return &session_list;
 		}
 
 		void filter( const char *x_name , const char *x_val , const char *meta_name , const bool use_cache )
@@ -270,12 +262,24 @@ class TrackInfoCache
 			return;
 		}
 
+		bool is_library_enabled() const
+		{
+			return have_library;
+		}
+
+		const DbList *getList() const
+		{
+			return &session_list;
+		}
+
 	private:
 		DbList lib_list;
 		std::map<std::string , LruCacheHandleList> cache_map;
 
 		DbList session_list;
 		bool is_first = true;
+
+		bool have_library = false;
 };
 
 
@@ -367,12 +371,8 @@ void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playl
 		{
 			t_queue.resolve( p_callback );  // maintain trackList order
 
-			const bool if_lib = track_cache.init();
-			if( !if_lib )
-			{
-				console::printf( CONSOLE_HEADER"Media library is not enabled, please configure it first" );
-				return;
-			}
+			if( !track_cache.is_library_enabled() )
+				continue;
 
 			p_callback->on_progress( ( "track " + std::to_string( counter++ ) ).c_str() );
 
