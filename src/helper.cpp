@@ -435,8 +435,6 @@ void openHelperLocation( const char *p_path , playlist_loader_callback::ptr p_ca
 		return;
 	}
 
-	// TODO: search in metadb to speed up
-
 	// add to queue for later batch process
 	queue->add( track_path );
 	return;

@@ -62,7 +62,7 @@ const advconfig_checkbox_factory cfg_read_no_resolve_loc( "Disable resolving <lo
 { 0xbe041849 , 0xccc3 , 0x43ed , { 0x93 , 0xf3 , 0xf1 , 0xf , 0xcd , 0x4c , 0x3b , 0x3c } },
 guid_branch_read , 1 , false );
 
-const advconfig_checkbox_factory cfg_read_partial_match( "Allow partial matching" ,
+const advconfig_checkbox_factory cfg_read_partial_match( "Allow partial matching (Slower)" ,
 { 0x468f5e45 , 0x2cab , 0x4dbb , { 0x9f , 0xce , 0x4b , 0xc3 , 0x63 , 0x2a , 0x79 , 0xac } },
 guid_branch_read , 2 , true );
 
