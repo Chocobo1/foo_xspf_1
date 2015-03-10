@@ -182,7 +182,7 @@ class TrackInfoCache
 			}
 
 			// get media library
-			if( have_library && ( lib_list.get_count() == 0 ) )
+			if( have_library )
 			{
 				service_ptr_t<MainThreadTask> m_task( new service_impl_t<MainThreadTask>( MainThreadTask::Task::GET_ALL_LIBRARY ) );
 				auto list_ptr = m_task->list_out.get_future();
@@ -194,7 +194,7 @@ class TrackInfoCache
 			return;
 		}
 
-		void reset()
+		void session_restart()
 		{
 			session_list.remove_all();
 			is_first = true;
@@ -209,12 +209,12 @@ class TrackInfoCache
 				list = &lib_list;
 			}
 
-			LruCacheHandleList *cache_map_ptr = nullptr;
+			LruCacheHandleList *cache_ptr = nullptr;
 			if( is_first && use_cache )
 			{
 				// search for "type name", also insert a new element...
-				cache_map_ptr = &( cache_map[x_name] );
-				const auto j = cache_map_ptr->get( x_val );
+				cache_ptr = &( cache_map[x_name] );
+				const auto j = cache_ptr->get( x_val );
 				if( j != nullptr )
 				{
 					list = j;
@@ -254,7 +254,7 @@ class TrackInfoCache
 			if( is_first && use_cache )
 			{
 				// store back results
-				cache_map_ptr->set( x_val , out );
+				cache_ptr->set( x_val , out );
 			}
 
 			session_list.move_from( out );
@@ -450,16 +450,16 @@ void openHelperNoLocation( playlist_loader_callback::ptr p_callback , const tiny
 		filterHelper( x_track , "album" , "ALBUM" , track_cache , true );
 	}
 
-	// 4.1.1.2.14.1.1.1.9 trackNum
-	if( cfg_read_tracknum )
-	{
-		filterHelper( x_track , "trackNum" , "TRACKNUMBER" , track_cache , true );
-	}
-
 	// 4.1.1.2.14.1.1.1.4 creator
 	if( cfg_read_creator )
 	{
 		filterHelper( x_track , "creator" , "ARTIST" , track_cache , true );
+	}
+
+	// 4.1.1.2.14.1.1.1.9 trackNum
+	if( cfg_read_tracknum )
+	{
+		filterHelper( x_track , "trackNum" , "TRACKNUMBER" , track_cache , true );
 	}
 
 	// 4.1.1.2.14.1.1.1.3 title
@@ -477,7 +477,7 @@ void openHelperNoLocation( playlist_loader_callback::ptr p_callback , const tiny
 		p_callback->on_entry( list->get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
 	}
 	
-	track_cache->reset();
+	track_cache->session_restart();
 	return;
 }
 
