@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "stdafx.h"
 #include "main.h"
+#include "helper.h"
 
 
 #define PLUGIN_NAME "XSPF Playlist"

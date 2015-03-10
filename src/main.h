@@ -30,8 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include "helper.h"
-
 // XSPF spec: http://www.xspf.org/xspf-v1.html
 class xspf : public playlist_loader
 {
