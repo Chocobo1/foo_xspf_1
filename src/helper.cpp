@@ -211,24 +211,21 @@ class TrackInfoCache
 
 		void filter( const char *x_name , const char *x_val , const char *meta_name , const bool use_cache )
 		{
-			const DbList *list = &lib_list;  // the "list" operates on
-			if( !is_first )
+			const DbList *list = &session_list;  // the "list" operates on
+			if( is_first )
 			{
-				list = &session_list;
+				list = &lib_list;
 			}
 
-			if( use_cache && is_first )
+			LruCacheHandleList *cache_map_ptr = nullptr;
+			if( is_first && use_cache )
 			{
-				// search for "type name"
-				const auto i = cache_map.find( x_name );
-				if( i != cache_map.end() )
+				// search for "type name", also insert a new element...
+				cache_map_ptr = &( cache_map[x_name] );
+				const auto j = cache_map_ptr->get( x_val );
+				if( j != nullptr )
 				{
-					// search for existing result
-					const DbList *j = ( i->second ).get( x_val );
-					if( j != nullptr )
-					{
-						list = j;
-					}
+					list = j;
 				}
 			}
 
@@ -262,11 +259,10 @@ class TrackInfoCache
 				}
 			}
 
-			if( use_cache && is_first )
+			if( is_first && use_cache )
 			{
 				// store back results
-				auto i = cache_map[x_name];  // get reference
-				i.set( x_val , out );
+				cache_map_ptr->set( x_val , out );
 			}
 
 			session_list.move_from( out );
@@ -288,6 +284,7 @@ void openHelperLocation( const char *p_path , playlist_loader_callback::ptr p_ca
 void openHelperNoLocation( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , TrackInfoCache *track_cache );
 
 void addInfoHelper( file_info_impl *f , const char *meta_name , const tinyxml2::XMLElement *x , const char *e_name );
+void filterHelper( const tinyxml2::XMLElement *x , const char *e_name , const char *meta_name , TrackInfoCache *track_cache , const bool use_cache );
 
 tinyxml2::XMLElement *xAddElement( tinyxml2::XMLDocument *x_doc , tinyxml2::XMLNode *x_parent , const char *e_name );
 void xAddMeta( tinyxml2::XMLDocument *x_doc , tinyxml2::XMLNode *x_parent , const char *e_name , const char *meta_text );
@@ -450,33 +447,25 @@ void openHelperNoLocation( playlist_loader_callback::ptr p_callback , const tiny
 	// 4.1.1.2.14.1.1.1.5 album
 	if( cfg_read_album )
 	{
-		const char *x_str = xGetChildElementText( x_track , "album" );
-		if( x_str != nullptr )
-			track_cache->filter( "album" , x_str , "ALBUM" , true );
-	}
-
-	// 4.1.1.2.14.1.1.1.3 title
-	if( cfg_read_title )
-	{
-		const char *x_str = xGetChildElementText( x_track , "title" );
-		if( x_str != nullptr )
-			track_cache->filter( "title" , x_str , "TITLE" , false );
-	}
-
-	// 4.1.1.2.14.1.1.1.4 creator
-	if( cfg_read_creator )
-	{
-		const char *x_str = xGetChildElementText( x_track , "creator" );
-		if( x_str != nullptr )
-			track_cache->filter( "creator" , x_str , "ARTIST" , false );
+		filterHelper( x_track , "album" , "ALBUM" , track_cache , true );
 	}
 
 	// 4.1.1.2.14.1.1.1.9 trackNum
 	if( cfg_read_tracknum )
 	{
-		const char *x_str = xGetChildElementText( x_track , "trackNum" );
-		if( x_str != nullptr )
-			track_cache->filter( "trackNum" , x_str , "TRACKNUMBER" , true );
+		filterHelper( x_track , "trackNum" , "TRACKNUMBER" , track_cache , true );
+	}
+
+	// 4.1.1.2.14.1.1.1.4 creator
+	if( cfg_read_creator )
+	{
+		filterHelper( x_track , "creator" , "ARTIST" , track_cache , true );
+	}
+
+	// 4.1.1.2.14.1.1.1.3 title
+	if( cfg_read_title )
+	{
+		filterHelper( x_track , "title" , "TITLE" , track_cache , false );
 	}
 
 	// add result
@@ -626,6 +615,14 @@ void addInfoHelper( file_info_impl *f , const char *meta_name , const tinyxml2::
 	{
 		f->meta_add( meta_name , str );
 	}
+	return;
+}
+
+void filterHelper( const tinyxml2::XMLElement *x , const char* e_name , const char *meta_name , TrackInfoCache *track_cache , const bool use_cache )
+{
+	const char *x_str = xGetChildElementText( x , e_name );
+	if( x_str != nullptr )
+		track_cache->filter( e_name , x_str , meta_name , use_cache );
 	return;
 }
 
