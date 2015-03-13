@@ -232,18 +232,18 @@ class TrackInfoCache
 				if( str == nullptr )
 					continue;
 
-				// try exact match
-				const bool e_match = ( strcmp( str , x_val ) == 0 ) ? true : false;
-				if( e_match )
+				// try best match, case-sensitive
+				const bool b_match = ( strcmp( str , x_val ) == 0 ) ? true : false;
+				if( b_match )
 				{
 					out.insert_item( item , j++ );  // put it at front
 					continue;
 				}
 
-				// try partial match
+				// try partial match, case-insensitive
 				if( cfg_read_partial_match )
 				{
-					const bool p_match = ( strstr( str , x_val ) != nullptr ) ? true : false;
+					const bool p_match = my_strcasestr( str , x_val );
 					if( p_match )
 					{
 						out += item;
@@ -280,6 +280,16 @@ class TrackInfoCache
 		bool is_first = true;
 
 		bool have_library = false;
+
+		bool my_strcasestr( const char *haystack , const char *needle )
+		{
+			// haystack & needle needs to be NULL terminated!
+			const char *haystack_end = haystack + strlen( haystack );
+			const char *needle_end = needle + strlen( needle );
+			const auto it = std::search( haystack , haystack_end , needle , needle_end ,
+			[]( const char &ch1 , const char &ch2 ) { return ( std::toupper( ch1 ) == std::toupper( ch2 ) ); } );
+			return ( it != haystack_end );
+		}
 };
 
 
