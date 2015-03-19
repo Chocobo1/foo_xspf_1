@@ -188,7 +188,7 @@ class TrackInfoCache
 				auto list_ptr = m_task->list_out.get_future();
 				m_task->add_callback();
 				lib_list.move_from( *( list_ptr.get() ) );
-				lib_list.sort_by_path_quick();
+//				lib_list.sort_by_path_quick();
 			}
 
 			return;
@@ -222,8 +222,9 @@ class TrackInfoCache
 			}
 
 			// scan through list
-			DbList out;
-			for( t_size i = 0 , max = list->get_count() , j = 0 ; i < max ; ++i )
+			std::multimap< size_t , t_size >out;  // <number of character matches, index in `list`>
+			const size_t x_val_len = strlen( x_val );
+			for( t_size i = 0 , max = list->get_count() ; i < max ; ++i )
 			{
 				// get meta string from db
 				const auto item = list->get_item_ref( i );
@@ -236,28 +237,37 @@ class TrackInfoCache
 				const bool b_match = ( strcmp( str , x_val ) == 0 ) ? true : false;
 				if( b_match )
 				{
-					out.insert_item( item , j++ );  // put it at front
+					out.emplace_hint( out.end() , SIZE_MAX , i );  // special place for best match
 					continue;
 				}
 
 				// try partial match, case-insensitive
 				if( cfg_read_partial_match )
 				{
-					const bool p_match = my_strcasestr( str , x_val );
+					const size_t str_len = strlen( str );
+					const bool p_match = ( str_len > x_val_len ) ? my_strcasestr( str , x_val ) : my_strcasestr( x_val , str );
 					if( p_match )
 					{
-						out += item;
+						out.emplace( min( str_len , x_val_len ) , i );
 					}
 				}
+			}
+
+			// handle the results
+			DbList out_list;
+			for( auto i = out.crbegin() , max = out.crend() ; i != max ; ++i )
+			{
+				// sorted from most likely to least likely
+				out_list += list->get_item_ref( i->second );
 			}
 
 			if( is_first && use_cache )
 			{
 				// store back results
-				cache_ptr->set( x_val , out );
+				cache_ptr->set( x_val , out_list );
 			}
 
-			session_list.move_from( out );
+			session_list.move_from( out_list );
 			is_first = false;
 			return;
 		}
@@ -479,7 +489,7 @@ void openHelperNoLocation( playlist_loader_callback::ptr p_callback , const tiny
 	// add result
 	const auto list = track_cache->getList();
 	const t_size list_size = list->get_count();
-	const t_size max = ( cfg_read_mulitple_match ? list_size : pfc::min_t<t_size>( 1 , list_size ) );
+	const t_size max = ( cfg_read_mulitple_match ? list_size : min( 1 , list_size ) );
 	for( t_size i = 0 ; i < max ; ++i )
 	{
 		p_callback->on_entry( list->get_item_ref( i ) , playlist_loader_callback::entry_from_playlist , filestats_invalid , false );
@@ -732,7 +742,7 @@ pfc::string8 pathToUri( const char *in_path , const char *ref_path )
 		// local path
 		// try extract relative path
 		pfc::string8 tmp_str;
-		if( filesystem::g_relative_path_create( in_path , ref_path , tmp_str ) )
+		if( cfg_write_relative_path && filesystem::g_relative_path_create( in_path , ref_path , tmp_str ) )
 		{
 			// have relative path
 			path_str = tmp_str;
