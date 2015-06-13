@@ -1,0 +1,101 @@
+# Notes:
+# - Minimal appveyor.yml file is an empty file. All sections are optional.
+# - Indent each level of configuration with 2 spaces. Do not use tabs!
+# - All section names are case-sensitive.
+# - Section names should be unique on each level.
+
+#---------------------------------#
+#  general configuration          #
+#---------------------------------#
+
+# version format
+version: '{branch}-{build}'
+
+# Do not build on tags (GitHub only)
+skip_tags: true
+
+
+#---------------------------------#
+#  environment configuration      #
+#---------------------------------#
+
+# environment variables
+# build system info: http://www.appveyor.com/docs/installed-software
+environment:
+  REPO_DIR: &REPO_DIR c:\project  # directory created by appveyor
+
+  FBSDK_DIR: c:\fbsdk
+  FBSDK_VERSION: 2015-01-15
+  FBSDK_URL: http://www.foobar2000.org/files/2921079e92d8f11027a271d8fa232ae5/SDK-2015-01-14.zip
+
+  SOL_FILE: foo_xspf_1.sln
+  MSBUILD_CMD: /m /p:Configuration=Release
+
+# clone directory
+clone_folder: *REPO_DIR
+
+# set clone depth
+clone_depth: 1
+
+matrix:
+  # set this flag to immediately finish build once one of the jobs fails.
+  fast_finish: true
+
+install:
+  - 'cd \'
+  - powershell -Command "& { $foo = 'http://www.foobar2000.org'; $wc = New-Object Net.WebClient; $wc.DownloadString( $foo + '/SDK' ) -match '/getfile/.+/SDK-2015-01-14.zip'; $path = $matches[0] -replace 'getfile' , 'files'; $wc.DownloadFile( $foo + $path , 'fbsdk.zip' ); }" > nul
+  - '7z x "fbsdk.zip" -o"%FBSDK_DIR%" > nul'
+
+
+#---------------------------------#
+#  build configuration            #
+#---------------------------------#
+
+# scripts to run before build
+before_build:
+  # git submodules
+  - 'cd "%REPO_DIR%"'
+  - 'git submodule update --init --remote --depth 1 --recursive'
+
+  # copy foobar2000 SDK
+  - 'cd \'
+  - 'robocopy "%FBSDK_DIR%" "%REPO_DIR%\lib\foobar2000_sdk" /E > nul & exit 0'
+  
+  # replace project files
+  - 'copy /Y "%REPO_DIR%\lib\vcxproj\tinyxml2.vcxproj" "%REPO_DIR%\lib\tinyxml2\tinyxml2"'
+  - 'copy /Y "%REPO_DIR%\lib\vcxproj\foobar2000_component_client.vcxproj" "%REPO_DIR%\lib\foobar2000_sdk\foobar2000\foobar2000_component_client"'
+  - 'copy /Y "%REPO_DIR%\lib\vcxproj\foobar2000_SDK.vcxproj" "%REPO_DIR%\lib\foobar2000_sdk\foobar2000\SDK"'
+  - 'copy /Y "%REPO_DIR%\lib\vcxproj\foobar2000_sdk_helpers.vcxproj" "%REPO_DIR%\lib\foobar2000_sdk\foobar2000\helpers"'
+  - 'copy /Y "%REPO_DIR%\lib\vcxproj\pfc.vcxproj" "%REPO_DIR%\lib\foobar2000_sdk\pfc"'
+
+# to run your custom scripts instead of automatic MSBuild
+build_script:
+  - 'cd "%REPO_DIR%"'
+  - 'msbuild %SOL_FILE% %MSBUILD_CMD%'
+
+# scripts to run before deployment
+after_build:
+  # prepare for artifacts packaging
+  - 'cd "%REPO_DIR%"'
+  - 'copy "%REPO_DIR%\bin\Release\foo_xspf_1.dll" "%REPO_DIR%"'  # the artifact must reside at the source repo root
+  - '7z a -tzip -mx9 "foo_xspf_1.fb2k-component" "foo_xspf_1.dll"'
+  - 'powershell -Command "& { (Get-FileHash -Algorithm SHA1 "foo_xspf_1.fb2k-component").hash; }" > "foo_xspf_1.fb2k-component.sha1"'
+
+
+#---------------------------------#
+#  tests configuration            #
+#---------------------------------#
+
+# to disable automatic tests
+test: off
+
+
+#---------------------------------#
+#  artifacts configuration        #
+#---------------------------------#
+
+artifacts:
+  - path: foo_xspf_1.fb2k-component
+    name: plugin
+  - path: foo_xspf_1.fb2k-component.sha1
+    name: checksum

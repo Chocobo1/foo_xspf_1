@@ -1,4 +1,4 @@
-# foo_xspf_1
+# foo_xspf_1 [![AppVeyor Build](https://ci.appveyor.com/api/projects/status/github/Chocobo1/foo_xspf_1?branch=master&svg=true)](https://ci.appveyor.com/project/Chocobo1/foo-xspf-1)
 XSPF playlist plugin for foobar2000 1.3+
 
 XSPF is the XML format for sharing playlists.
