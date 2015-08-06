@@ -319,7 +319,7 @@ void xVerifyNamespace( const tinyxml2::XMLElement *x );
 const char *xVerifyAttribute( const tinyxml2::XMLElement *x , const char *a_name );
 const char *xGetChildElementText( const tinyxml2::XMLElement *x , const char *e_name );
 
-pfc::string8 pathToUri( const char *in_path , const char *ref_path );
+pfc::string8 pathToUri( const bool use_relative , const char *in_path , const char *ref_path );
 pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::string8 xbase_str );
 
 pfc::string8 urlEncodeUtf8( const char *in );
@@ -545,7 +545,7 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 		if( cfg_write_location )
 		{
 			const char *track_path = track_item->get_path();
-			const auto track_uri = pathToUri( track_path , p_path );
+			const auto track_uri = pathToUri( cfg_write_relative_path , track_path , p_path );
 			if( !track_uri.is_empty() )
 			{
 				xAddMeta( &x , x_track , "location" , track_uri );
@@ -732,34 +732,53 @@ const char * xGetChildElementText( const tinyxml2::XMLElement *x , const char * 
 }
 
 
-pfc::string8 pathToUri( const char *in_path , const char *ref_path )
+pfc::string8 pathToUri( const bool use_relative , const char *in_path , const char *ref_path )
 {
 	pfc::string8 out;
 
 	pfc::string8 path_str = in_path;
 	if( !filesystem::g_is_remote_safe( path_str ) )
 	{
-		// local path
+		// target is local
 		// try extract relative path
 		pfc::string8 tmp_str;
-		if( cfg_write_relative_path && filesystem::g_relative_path_create( in_path , ref_path , tmp_str ) )
+		if( use_relative && filesystem::g_relative_path_create( in_path , ref_path , tmp_str ) )
 		{
-			// have relative path
-			path_str = tmp_str;
+			// relative path
+			path_str.g_swap( path_str , tmp_str );
+			path_str.replace_string( "file://" , "" );
+			//console::printf( "rel path_str: %s" , path_str.get_ptr() );
 		}
-		path_str.replace_string( "file://" , "file:///" );
-
-		// rare case, when loaded a track with <location> while it's not in metadb and fb2k didn't reads its meta yet. the generated xspf playlist will not have "file://" scheme
-		if( !path_str.has_prefix_i( "file:/" ) )
+		else
 		{
-			path_str.insert_chars(0,"file:///");
+			// absolute path
+			path_str.replace_string( "file://" , "file:///" );
+			
+			// rare case, when loaded a track with <location> while it's not in metadb and fb2k didn't reads its meta yet. the generated xspf playlist will not have "file://" scheme
+			if( path_str.has_prefix( "\\" ) )
+			{
+				path_str.insert_chars( 0 , "file:\\\\" );
+			}
+			//console::printf( "abs path_str: %s" , path_str.get_ptr() );
 		}
+		
+		// create URI
+		path_str.replace_char( '\\' , '/' );  // note: linux can have '\' in file name
+		out = urlEncodeUtf8( path_str );
 	}
-
-	// create URI
-	path_str.replace_char( '\\' , '/' );  // note: linux can have '\' in file name
-	out = urlEncodeUtf8( path_str );
-
+	else
+	{
+		// target is remote
+		// do nothing
+		out = in_path;
+	}
+	/*
+	console::printf( "\n" );
+	console::printf( "in_path: %s" , in_path );
+	console::printf( "ref_path: %s" , ref_path );
+	console::printf( "out: %s" , out.get_ptr() );
+	console::printf( "\n" );
+	*/
 	return out;
 }
 
@@ -791,7 +810,7 @@ pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::s
 			}
 			else
 			{
-				// ex: file:///c:/music/a.mp3
+				// ex: file:///c:/music/a.mp3 -> c:\music\a.mp3
 				// do nothing
 			}
 			in_str.replace_string( "/" , "\\" );
