@@ -773,28 +773,59 @@ pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::s
 		out += xbase_str;
 	}
 
-	// check "file:" scheme
 	pfc::string8 in_str = urlDecodeUtf8( in_uri );
-	const bool is_local = in_str.has_prefix( "file:" );
-	if( is_local )
+	const bool is_abs_uri = ( in_str.find_first( ':' ) < in_str.get_length() );
+	if( is_abs_uri )
 	{
-		// prepare
-		in_str.replace_string( "file:///" , "" );
-		in_str.replace_string( "/" , "\\" );
-
-		// check if relative path
-		const bool is_relative_path = ( in_str.find_first( ':' ) < in_str.get_length() ) ? false : true ;
-		if( is_relative_path )
+		// have scheme
+		const bool is_file_scheme = in_str.has_prefix( "file:" );
+		if( is_file_scheme )
 		{
-			// add parent path
-			pfc::string8 par_path = ref_path;
-			par_path.truncate_to_parent_path();
-			par_path.fix_dir_separator();
-			out += par_path;
+			// ex: file://
+			in_str.replace_string( "file:///" , "" );
+			const bool is_root = ( in_str.find_first( ':' ) >= in_str.get_length() );
+			if( is_root )
+			{
+				// ex: file:///music/a.mp3 -> %SystemDrive%\music\a.mp3 -> \music\a.mp3 (this is ok for fb2k too)
+				in_str.insert_chars( 0 , "\\" );
+			}
+			else
+			{
+				// ex: file:///c:/music/a.mp3
+				// do nothing
+			}
+			in_str.replace_string( "/" , "\\" );
+		}
+		else
+		{
+			// ex: http://
+			// do nothing
 		}
 	}
-	out += in_str;
+	else
+	{
+		// URI reference
+		const bool is_rel_path = !in_str.has_prefix( "/" );  // possible to use unix-like path
+		in_str.replace_string( "/" , "\\" );
+		if( is_rel_path )
+		{
+			pfc::string8 ref_path_str = ref_path;
+			ref_path_str.replace_string( "file://" , "" );
+			ref_path_str.truncate_to_parent_path();
+			ref_path_str += "\\";
+			ref_path_str += in_str;  // let fb2k handle this mess
+			ref_path_str.g_swap( ref_path_str , in_str );
+		}
+	}
 
+	out += in_str;
+	/*
+	console::printf( "\n" );
+	console::printf( "in_uri: %s" , in_uri );
+	console::printf( "ref_path: %s" , ref_path );
+	console::printf( "out: %s" , out.get_ptr() );
+	console::printf( "\n" );
+	*/
 	return out;
 }
 
