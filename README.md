@@ -17,8 +17,8 @@ XSPF is the XML format for sharing playlists.
 * Options are listed at `File` -> `Preferences` -> page `Advanced` -> tab `Tools` -> `XSPF playlist`
   ![options_screenshot](https://raw.githubusercontent.com/Chocobo1/foo_xspf_1/master/pics/options.png)
 
-### Compile
-* Visual Studio 2013 Express [(compatibility notice)](http://www.hydrogenaud.io/forums/index.php?showtopic=108411)
+### Compiler
+* Visual Studio 2015
 
 ### License
 See [LICENSE](https://github.com/Chocobo1/foo_xspf_1/blob/master/LICENSE) file
