@@ -307,7 +307,7 @@ class TrackInfoCache
 void openHelperLocation( const char *p_path , playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , XmlBaseImpl *xml_base , TrackQueue *queue );
 void openHelperNoLocation( playlist_loader_callback::ptr p_callback , const tinyxml2::XMLElement *x_track , TrackInfoCache *track_cache );
 
-void addInfoHelper( file_info_impl *f , const char *meta_name , const tinyxml2::XMLElement *x , const char *e_name );
+const char* addInfoHelper( file_info_impl *f , const char *meta_name , const tinyxml2::XMLElement *x , const char *e_name );
 void filterHelper( const tinyxml2::XMLElement *x , const char *e_name , const char *meta_name , TrackInfoCache *track_cache , const bool use_cache );
 
 tinyxml2::XMLElement *xAddElement( tinyxml2::XMLDocument *x_doc , tinyxml2::XMLNode *x_parent , const char *e_name );
@@ -423,12 +423,10 @@ void openHelperLocation( const char *p_path , playlist_loader_callback::ptr p_ca
 	// read <location> as is
 	if( cfg_read_no_resolve_loc )
 	{
+		p_callback->on_progress( track_path );
+
 		// file info variables
 		file_info_impl f_info;
-		metadb_handle_ptr f_handle;
-
-		p_callback->on_progress( track_path );
-		p_callback->handle_create( f_handle , make_playable_location( track_path , 0 ) );
 
 		// 4.1.1.2.14.1.1.1.3 title
 		if( cfg_read_title )
@@ -446,10 +444,20 @@ void openHelperLocation( const char *p_path , playlist_loader_callback::ptr p_ca
 			addInfoHelper( &f_info , "ALBUM" , x_track , "album" );
 
 		// 4.1.1.2.14.1.1.1.9 trackNum
+		long int subsong_number = 0;
 		if( cfg_read_tracknum )
-			addInfoHelper( &f_info , "TRACKNUMBER" , x_track , "trackNum" );
+		{
+			const char* str = addInfoHelper( &f_info , "TRACKNUMBER" , x_track , "trackNum" );
+
+			// special case when <location> leads to another playlist
+			bool is_playlist = track_path.has_suffix( ".cue" );
+			if( is_playlist )
+				subsong_number = max( strtol( str , nullptr , 10 ) , 0);
+		}
 
 		// insert into playlist
+		metadb_handle_ptr f_handle;
+		p_callback->handle_create( f_handle , make_playable_location( track_path , subsong_number ) );
 		p_callback->on_entry_info( f_handle , playlist_loader_callback::entry_user_requested , filestats_invalid , f_info , false );
 
 		return;
@@ -626,14 +634,16 @@ void write_helper( const char *p_path , const service_ptr_t<file> &p_file , meta
 }
 
 
-void addInfoHelper( file_info_impl *f , const char *meta_name , const tinyxml2::XMLElement *x , const char* e_name )
+const char* addInfoHelper( file_info_impl *f , const char *meta_name , const tinyxml2::XMLElement *x , const char* e_name )
 {
+	// return added data
 	const char *str = xGetChildElementText( x , e_name );
 	if( str != nullptr )
 	{
 		f->meta_add( meta_name , str );
+		return str;
 	}
-	return;
+	return nullptr;
 }
 
 void filterHelper( const tinyxml2::XMLElement *x , const char* e_name , const char *meta_name , TrackInfoCache *track_cache , const bool use_cache )
