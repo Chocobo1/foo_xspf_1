@@ -25,7 +25,7 @@ branches:
 #---------------------------------#
 
 # environment variables
-# build system info: http://www.appveyor.com/docs/installed-software
+# build system info: https://www.appveyor.com/docs/installed-software
 os: Visual Studio 2015
 
 environment:
@@ -33,7 +33,6 @@ environment:
 
   FBSDK_DIR: c:\fbsdk
   FBSDK_VERSION: 2015-08-03
-  FBSDK_URL: http://www.foobar2000.org/files/2921079e92d8f11027a271d8fa232ae5/SDK-2015-08-03.zip
 
   SOL_FILE: foo_xspf_1.sln
   MSBUILD_CMD: /m /p:Configuration=Release
@@ -43,7 +42,7 @@ clone_folder: *REPO_DIR
 
 install:
   - 'cd \'
-  - powershell -Command "& { $foo = 'http://www.foobar2000.org'; $wc = New-Object Net.WebClient; $wc.DownloadString( $foo + '/SDK' ) -match '/getfile/.+/SDK-2015-08-03.zip'; $path = $matches[0] -replace 'getfile' , 'files'; $wc.DownloadFile( $foo + $path , 'fbsdk.zip' ); }" > nul
+  - powershell -Command "& { $foo = 'https://www.foobar2000.org'; $wc = New-Object Net.WebClient; $wc.DownloadString( $foo + '/SDK' ) -match '/getfile/.+/SDK-2015-08-03.zip'; $path = $matches[0] -replace 'getfile' , 'files'; $wc.DownloadFile( $foo + $path , 'fbsdk.zip' ); }" > nul
   - '7z x "fbsdk.zip" -o"%FBSDK_DIR%" > nul'
 
 
