@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015, Mike Tzou
+Copyright (c) 2016, Mike Tzou
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

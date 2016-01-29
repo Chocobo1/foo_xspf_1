@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015, Mike Tzou
+Copyright (c) 2016, Mike Tzou
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #define PLUGIN_NAME "XSPF Playlist"
-#define PLUGIN_VERSION "2.6.1"
+#define PLUGIN_VERSION "2.6.2"
 DECLARE_COMPONENT_VERSION
 (
 	PLUGIN_NAME , PLUGIN_VERSION ,
