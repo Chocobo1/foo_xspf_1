@@ -100,10 +100,10 @@ See [LICENSE](https://github.com/Chocobo1/foo_xspf_1/blob/master/LICENSE) file
 
 ### Third-party code
 * [TinyXML-2](http://www.grinninglizard.com/tinyxml2/)
-* [foobar2000 Software Development Kit](http://www.foobar2000.org/SDK)
+* [foobar2000 Software Development Kit](https://www.foobar2000.org/SDK)
 
 ### References
 * [XSPF](http://www.xspf.org/)
 * [XSPF validator](http://validator.xspf.org/)
-* [foobar2000](http://www.foobar2000.org/)
-* [foobar2000 forum](http://www.hydrogenaud.io/forums/index.php?act=SF&s=&f=28)
+* [foobar2000](https://www.foobar2000.org/)
+* [foobar2000 forum](https://hydrogenaud.io/index.php/board,28.0.html)
