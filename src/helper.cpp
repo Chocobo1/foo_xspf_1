@@ -455,6 +455,15 @@ void openHelperLocation( const char *p_path , playlist_loader_callback::ptr p_ca
 				subsong_number = max( strtol( str , nullptr , 10 ) , 0);
 		}
 
+		// 4.1.1.2.14.1.1.1.10 duration
+		const auto *track_duration_text = xGetChildElementText( x_track , "duration" );
+		if( track_duration_text != nullptr )
+		{
+			long int track_duration_int = max( strtol( track_duration_text , nullptr , 10 ) , 0 ) / 1000;
+			if( track_duration_int > 0 )
+				f_info.set_length( track_duration_int );
+		}
+
 		// insert into playlist
 		metadb_handle_ptr f_handle;
 		p_callback->handle_create( f_handle , make_playable_location( track_path , subsong_number ) );
