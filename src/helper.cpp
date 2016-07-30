@@ -684,7 +684,7 @@ void xAddMeta( tinyxml2::XMLDocument *x_doc , tinyxml2::XMLNode *x_parent , cons
 void xVerifyDocument( tinyxml2::XMLDocument *x , const char * f )
 {
 	const tinyxml2::XMLError ret = x->Parse( f );
-	if( ret != tinyxml2::XML_NO_ERROR )
+	if( ret != tinyxml2::XML_SUCCESS )
 	{
 		console::printf( CONSOLE_HEADER"XML parse error id: %d, msg: %s" , ret , x->GetErrorStr1() );
 		throw exception_io_data();
