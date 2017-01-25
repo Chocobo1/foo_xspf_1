@@ -833,6 +833,7 @@ pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::s
 				// do nothing
 			}
 			in_str.replace_string( "/" , "\\" );
+			in_str.insert_chars(0, "file://");  // without this, "Open containing folder" won't work
 		}
 		else
 		{
@@ -852,6 +853,7 @@ pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::s
 			ref_path_str.truncate_to_parent_path();
 			ref_path_str += "\\";
 			ref_path_str += in_str;  // let fb2k handle this mess
+			ref_path_str.insert_chars(0, "file://");  // without this, "Open containing folder" won't work
 			ref_path_str.g_swap( ref_path_str , in_str );
 		}
 	}
