@@ -14,10 +14,10 @@ version: '{branch}-{build}'
 # Do not build on tags (GitHub only)
 skip_tags: true
 
-# avoid malicious attempt via pull requests
+# manual mode
 branches:
-  only:
-    - master
+  except:
+    - /.*/
 
 
 #---------------------------------#
@@ -59,7 +59,7 @@ before_build:
   # copy foobar2000 SDK
   - 'cd \'
   - 'robocopy "%FBSDK_DIR%" "%REPO_DIR%\lib\foobar2000_sdk" /E > nul & exit 0'
-  
+
   # replace project files
   - 'copy /Y "%REPO_DIR%\lib\vcxproj\tinyxml2.vcxproj" "%REPO_DIR%\lib\tinyxml2\tinyxml2"'
   - 'copy /Y "%REPO_DIR%\lib\vcxproj\foobar2000_component_client.vcxproj" "%REPO_DIR%\lib\foobar2000_sdk\foobar2000\foobar2000_component_client"'
