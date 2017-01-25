@@ -78,7 +78,7 @@ after_build:
   - 'cd "%REPO_DIR%"'
   - 'copy "%REPO_DIR%\bin\Release\foo_xspf_1.dll" "%REPO_DIR%"'  # the artifact must reside at the source repo root
   - '7z a -tzip -mx9 "foo_xspf_1.fb2k-component" "foo_xspf_1.dll"'
-  - 'powershell -Command "& { (Get-FileHash -Algorithm SHA1 "foo_xspf_1.fb2k-component").hash; }" > "foo_xspf_1.fb2k-component.sha1"'
+  - 'powershell -Command "& { $hash = (Get-FileHash -Algorithm SHA1 "foo_xspf_1.fb2k-component").hash.ToString().toLower(); Write-Host $hash " *foo_xspf_1.fb2k-component"; }" > "foo_xspf_1.fb2k-component.sha1"'
 
 
 #---------------------------------#
