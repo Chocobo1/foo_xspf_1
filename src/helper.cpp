@@ -325,6 +325,8 @@ pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::s
 pfc::string8 urlEncodeUtf8( const char *in );
 pfc::string8 urlDecodeUtf8( const char *in );
 
+pfc::string8 get_system_drive_path();
+
 
 // functions
 void open_helper( const char *p_path , const service_ptr_t<file> &p_file , playlist_loader_callback::ptr p_callback , abort_callback &p_abort )
@@ -812,50 +814,43 @@ pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::s
 	}
 
 	pfc::string8 in_str = urlDecodeUtf8( in_uri );
-	const bool is_abs_uri = ( in_str.find_first( ':' ) < in_str.get_length() );
-	if( is_abs_uri )
+
+	const bool has_scheme = ( in_str.find_first( "://" ) < in_str.get_length() );
+	const bool is_abs_path = in_str.has_prefix( "/" );  // possible to use unix-like path
+	if( has_scheme )
 	{
-		// have scheme
-		const bool is_file_scheme = in_str.has_prefix( "file:" );
-		if( is_file_scheme )
+		const bool has_file_scheme = in_str.has_prefix( "file://" );
+		if( has_file_scheme )
 		{
-			// ex: file://
+			// https://en.wikipedia.org/wiki/File_URI_scheme
 			in_str.replace_string( "file:///" , "" );
-			const bool is_root = ( in_str.find_first( ':' ) >= in_str.get_length() );
-			if( is_root )
-			{
-				// ex: file:///music/a.mp3 -> %SystemDrive%\music\a.mp3 -> \music\a.mp3 (this is ok for fb2k too)
-				in_str.insert_chars( 0 , "\\" );
-			}
-			else
-			{
-				// ex: file:///c:/music/a.mp3 -> c:\music\a.mp3
-				// do nothing
-			}
-			in_str.replace_string( "/" , "\\" );
-			in_str.insert_chars(0, "file://");  // without this, "Open containing folder" won't work
+			in_str.replace_string( "file://" , "" );
+			in_str.replace_string( "/" , "\\" );  // workaround for `make_playable_location`
+			in_str.insert_chars(0, "file://");  // without this, "Open containing folder" command won't work
 		}
-		else
-		{
-			// ex: http://
-			// do nothing
-		}
+
+		// ex: "http://", do nothing
 	}
-	else
+	else if( is_abs_path )
 	{
-		// URI reference
-		const bool is_rel_path = !in_str.has_prefix( "/" );  // possible to use unix-like path
+		// ex. "/folder/abc.mp3"
+		in_str.remove_chars( 0 , 1 );
 		in_str.replace_string( "/" , "\\" );
-		if( is_rel_path )
-		{
-			pfc::string8 ref_path_str = ref_path;
-			ref_path_str.replace_string( "file://" , "" );
-			ref_path_str.truncate_to_parent_path();
-			ref_path_str += "\\";
-			ref_path_str += in_str;  // let fb2k handle this mess
-			ref_path_str.insert_chars(0, "file://");  // without this, "Open containing folder" won't work
-			ref_path_str.g_swap( ref_path_str , in_str );
-		}
+		in_str.insert_chars(0, get_system_drive_path());
+		in_str.insert_chars(0, "file://");  // 1. should be "file:///", but fb2k doesn't like it  2. without this, "Open containing folder" command won't work
+	}
+	else  // relative path, 
+	{
+		in_str.replace_string( "/" , "\\" );
+
+		pfc::string8 ref_path_str = ref_path;
+		ref_path_str.replace_string( "file:///" , "" );
+		ref_path_str.replace_string( "file://" , "" );
+		ref_path_str.truncate_to_parent_path();
+		ref_path_str += "\\";
+		ref_path_str += in_str;  // let fb2k handle this mess
+		ref_path_str.insert_chars(0, "file://");  // 1. should be "file:///", but fb2k doesn't like it  2. without this, "Open containing folder" command won't work
+		ref_path_str.g_swap( ref_path_str , in_str );
 	}
 
 	out += in_str;
@@ -927,4 +922,27 @@ pfc::string8 urlDecodeUtf8( const char *in )
 	}
 
 	return out.c_str();
+}
+
+pfc::string8 get_system_drive_path()
+{
+	static const pfc::string8 ret = []() -> pfc::string8
+	{
+		TCHAR path[MAX_PATH + 1] = { L'\0' };
+		UINT ok = GetWindowsDirectory( path, MAX_PATH );
+		if( ok == 0 )
+		{
+			return "C:\\";
+		}
+
+		pfc::string8 tmp;
+		for( size_t i = 0; i < MAX_PATH; ++i )
+		{
+			tmp.add_char(path[i]);
+			if( tmp.last_char() == '\\' )
+				break;
+		}
+		return tmp;
+	}();
+	return ret;
 }
