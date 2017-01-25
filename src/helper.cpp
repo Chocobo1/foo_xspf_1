@@ -57,7 +57,7 @@ class MainThreadTask : public main_thread_callback
 			return;
 		}
 
-		void callback_run()  // overwrite virtual func
+		void callback_run() override
 		{
 			// main thread runs here
 			switch( task_sel )
