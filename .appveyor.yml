@@ -25,8 +25,8 @@ branches:
 #---------------------------------#
 
 # environment variables
-# build system info: https://www.appveyor.com/docs/installed-software
-os: Visual Studio 2015
+# build system info: https://www.appveyor.com/docs/build-environment/#pre-installed-software
+os: Visual Studio 2017
 
 environment:
   REPO_DIR: &REPO_DIR c:\project  # directory created by appveyor
