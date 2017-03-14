@@ -9,7 +9,7 @@ XSPF is the XML format for sharing playlists.
 * Support XSPF version 1 format
 
 ### Download
-[Project release page](https://github.com/Chocobo1/foo_xspf_1/releases)
+[Project release page](../../releases)
 
 ### Usage
 * To read a XSPF playlist, drag and drop the playlist to foobar2000, or just open it as you normally do (duh
@@ -17,7 +17,7 @@ XSPF is the XML format for sharing playlists.
 
 ### Options
 Options are listed at `File` -> `Preferences` -> page `Advanced` -> tab `Tools` -> `XSPF playlist`
-  ![options_screenshot](https://raw.githubusercontent.com/Chocobo1/foo_xspf_1/master/pics/options.png)
+  ![options_screenshot](./pics/options.png)
 * Read
   * \<album>
 
@@ -96,7 +96,7 @@ Options are listed at `File` -> `Preferences` -> page `Advanced` -> tab `Tools` 
 * Visual Studio 2015
 
 ### License
-See [LICENSE](https://github.com/Chocobo1/foo_xspf_1/blob/master/LICENSE) file
+See [LICENSE](./LICENSE) file
 
 ### Third-party code
 * [TinyXML-2](http://www.grinninglizard.com/tinyxml2/)
@@ -104,6 +104,6 @@ See [LICENSE](https://github.com/Chocobo1/foo_xspf_1/blob/master/LICENSE) file
 
 ### References
 * [XSPF](http://www.xspf.org/)
-* [XSPF validator](http://validator.xspf.org/)
+* [XSPF validator](https://validator.xspf.org/)
 * [foobar2000](https://www.foobar2000.org/)
 * [foobar2000 forum](https://hydrogenaud.io/index.php/board,28.0.html)
