@@ -25,25 +25,21 @@ branches:
 #---------------------------------#
 
 # environment variables
-# build system info: https://www.appveyor.com/docs/build-environment/#pre-installed-software
-os: Visual Studio 2017
+# build system info: https://www.appveyor.com/docs/windows-images-software/
+os: Visual Studio 2022
 
 environment:
   REPO_DIR: &REPO_DIR c:\project  # directory created by appveyor
 
   FBSDK_DIR: c:\fbsdk
-  FBSDK_VERSION: 2015-08-03
+  FBSDK_VERSION: 2023-04-18
 
   SOL_FILE: foo_xspf_1.sln
-  MSBUILD_CMD: /m /p:Configuration=Release
+  MSBUILD_CMD_X86: /maxcpucount /property:RestorePackagesConfig=true,Configuration=Release,Platform=Win32 /target:restore,build
+  MSBUILD_CMD_X64: /maxcpucount /property:RestorePackagesConfig=true,Configuration=Release,Platform=x64   /target:restore,build
 
 # clone directory
 clone_folder: *REPO_DIR
-
-install:
-  - 'cd \'
-  - powershell -Command "& { $foo = 'https://www.foobar2000.org'; $wc = New-Object Net.WebClient; $wc.DownloadString( $foo + '/SDK' ) -match '/getfile/.+/SDK-2015-08-03.zip'; $path = $matches[0] -replace 'getfile' , 'files'; $wc.DownloadFile( $foo + $path , 'fbsdk.zip' ); }" > nul
-  - '7z x "fbsdk.zip" -o"%FBSDK_DIR%" > nul'
 
 
 #---------------------------------#
@@ -53,32 +49,35 @@ install:
 # scripts to run before build
 before_build:
   # git submodules
-  - 'cd "%REPO_DIR%"'
-  - 'git submodule update --init --remote --depth 1 --recursive'
+  - cd "%REPO_DIR%"
+  - git submodule update --init --recursive --depth 1
 
-  # copy foobar2000 SDK
-  - 'cd \'
-  - 'robocopy "%FBSDK_DIR%" "%REPO_DIR%\lib\foobar2000_sdk" /E > nul & exit 0'
+  # prepare foobar2000 SDK
+  - cd \
+  - powershell -Command "& { $wc = New-Object Net.WebClient; $wc.DownloadFile( 'https://www.foobar2000.org/files/SDK-%FBSDK_VERSION%.7z' , 'fbsdk.7z' ); }" > nul
+  - 7z x "fbsdk.7z" -o"%FBSDK_DIR%" > nul
+  - robocopy "%FBSDK_DIR%" "%REPO_DIR%\lib\foobar2000_sdk" /E > nul & exit 0
 
   # replace project files
-  - 'copy /Y "%REPO_DIR%\lib\vcxproj\tinyxml2.vcxproj" "%REPO_DIR%\lib\tinyxml2\tinyxml2"'
-  - 'copy /Y "%REPO_DIR%\lib\vcxproj\foobar2000_component_client.vcxproj" "%REPO_DIR%\lib\foobar2000_sdk\foobar2000\foobar2000_component_client"'
-  - 'copy /Y "%REPO_DIR%\lib\vcxproj\foobar2000_SDK.vcxproj" "%REPO_DIR%\lib\foobar2000_sdk\foobar2000\SDK"'
-  - 'copy /Y "%REPO_DIR%\lib\vcxproj\foobar2000_sdk_helpers.vcxproj" "%REPO_DIR%\lib\foobar2000_sdk\foobar2000\helpers"'
-  - 'copy /Y "%REPO_DIR%\lib\vcxproj\pfc.vcxproj" "%REPO_DIR%\lib\foobar2000_sdk\pfc"'
+  - copy /Y "%REPO_DIR%\lib\vcxproj\foobar2000_component_client.vcxproj" "%REPO_DIR%\lib\foobar2000_sdk\foobar2000\foobar2000_component_client"
+  - copy /Y "%REPO_DIR%\lib\vcxproj\foobar2000_SDK.vcxproj" "%REPO_DIR%\lib\foobar2000_sdk\foobar2000\SDK"
+  - copy /Y "%REPO_DIR%\lib\vcxproj\foobar2000_sdk_helpers.vcxproj" "%REPO_DIR%\lib\foobar2000_sdk\foobar2000\helpers"
+  - copy /Y "%REPO_DIR%\lib\vcxproj\pfc.vcxproj" "%REPO_DIR%\lib\foobar2000_sdk\pfc"
 
 # to run your custom scripts instead of automatic MSBuild
 build_script:
-  - 'cd "%REPO_DIR%"'
-  - 'msbuild %SOL_FILE% %MSBUILD_CMD%'
+  - cd "%REPO_DIR%"
+  - msbuild %SOL_FILE% %MSBUILD_CMD_X86%
+  - msbuild %SOL_FILE% %MSBUILD_CMD_X64%
 
 # scripts to run before deployment
 after_build:
   # prepare for artifacts packaging
-  - 'cd "%REPO_DIR%"'
-  - 'copy "%REPO_DIR%\bin\Release\foo_xspf_1.dll" "%REPO_DIR%"'  # the artifact must reside at the source repo root
-  - '7z a -tzip -mx9 "foo_xspf_1.fb2k-component" "foo_xspf_1.dll"'
-  - 'powershell -Command "& { $hash = (Get-FileHash -Algorithm SHA1 "foo_xspf_1.fb2k-component").hash.ToString().toLower(); Write-Host $hash " *foo_xspf_1.fb2k-component"; }" > "foo_xspf_1.fb2k-component.sha1"'
+  - cd "%REPO_DIR%"
+  - copy "Release\foo_xspf_1.dll" "."
+  - copy "x64\Release\foo_xspf_1.dll" "x64"
+  - 7z a -tzip -mx9 "foo_xspf_1.fb2k-component" "foo_xspf_1.dll" "x64\foo_xspf_1.dll"  # the artifact must reside at the source repo root
+  - 'powershell -Command "& { $hash = (Get-FileHash -Algorithm SHA256 "foo_xspf_1.fb2k-component").hash.ToString().toLower(); Write-Host $hash " *foo_xspf_1.fb2k-component"; }" > "foo_xspf_1.fb2k-component.sha256"'
 
 
 #---------------------------------#
@@ -96,5 +95,5 @@ test: off
 artifacts:
   - path: foo_xspf_1.fb2k-component
     name: plugin
-  - path: foo_xspf_1.fb2k-component.sha1
+  - path: foo_xspf_1.fb2k-component.sha256
     name: checksum

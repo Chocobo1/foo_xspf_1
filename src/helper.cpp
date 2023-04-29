@@ -688,7 +688,7 @@ void xVerifyDocument( tinyxml2::XMLDocument *x , const char * f )
 	const tinyxml2::XMLError ret = x->Parse( f );
 	if( ret != tinyxml2::XML_SUCCESS )
 	{
-		console::printf( CONSOLE_HEADER"XML parse error id: %d, msg: %s" , ret , x->GetErrorStr1() );
+		console::printf( CONSOLE_HEADER"XML parse error id: %d, msg: %s" , ret , x->ErrorStr() );
 		throw exception_io_data();
 	}
 	return;
@@ -766,7 +766,7 @@ pfc::string8 pathToUri( const bool use_relative , const char *in_path , const ch
 		if( use_relative && filesystem::g_relative_path_create( in_path , ref_path , tmp_str ) )
 		{
 			// relative path
-			path_str.g_swap( path_str , tmp_str );
+			path_str = std::move( tmp_str );
 			path_str.replace_string( "file://" , "" );
 			//console::printf( "rel path_str: %s" , path_str.get_ptr() );
 		}
@@ -850,7 +850,7 @@ pfc::string8 uriToPath( const char *in_uri , const char *ref_path , const pfc::s
 		ref_path_str += "\\";
 		ref_path_str += in_str;  // let fb2k handle this mess
 		ref_path_str.insert_chars(0, "file://");  // 1. should be "file:///", but fb2k doesn't like it  2. without this, "Open containing folder" command won't work
-		ref_path_str.g_swap( ref_path_str , in_str );
+		in_str = std::move( ref_path_str );
 	}
 
 	out += in_str;

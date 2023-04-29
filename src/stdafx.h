@@ -30,15 +30,23 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include <map>
-#include <set>
-#include <list>
 #include <ctime>
 #include <future>
+#include <list>
+#include <map>
+#include <set>
+#include <string>
 
-#include <Shlwapi.h>	// for foobar2000 SDK
+#include "../lib/foobar2000_sdk/foobar2000/SDK/foobar2000-lite.h"
 
-#include "../lib/foobar2000_sdk/foobar2000/SDK/foobar2000.h"
+#include "../lib/foobar2000_sdk/foobar2000/SDK/advconfig_impl.h"
+#include "../lib/foobar2000_sdk/foobar2000/SDK/componentversion.h"
+#include "../lib/foobar2000_sdk/foobar2000/SDK/file_info_impl.h"
+#include "../lib/foobar2000_sdk/foobar2000/SDK/library_manager.h"
+#include "../lib/foobar2000_sdk/foobar2000/SDK/main_thread_callback.h"
+#include "../lib/foobar2000_sdk/foobar2000/SDK/playlist.h"
+#include "../lib/foobar2000_sdk/foobar2000/SDK/playlist_loader.h"
+
 #include "../lib/tinyxml2/tinyxml2.h"
 
 #define CONSOLE_HEADER "foo_xspf_1: "
