@@ -32,6 +32,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "main.h"
 #include "helper.h"
 
+#define xstr(s) str(s)
+#define str(s) #s
 
 #define PLUGIN_NAME "XSPF Playlist"
 #define PLUGIN_VERSION "2.6.4"
@@ -39,15 +41,16 @@ DECLARE_COMPONENT_VERSION
 (
 	PLUGIN_NAME , PLUGIN_VERSION ,
 
-	PLUGIN_NAME"\n"
-	"Compiled on: "__DATE__"\n"
-	"https://github.com/Chocobo1/foo_xspf_1\n"
-	"This plugin is released under BSD 3-Clause license\n"
+	PLUGIN_NAME " " PLUGIN_VERSION "\n"
+	"Compiled on: "__DATE__ "\n"
+	"https://github.com/Chocobo1/foo_xspf_1" "\n"
+	"This plugin is released under BSD 3-Clause license" "\n"
 	"\n"
-	"Mike Tzou (Chocobo1)\n"
+	"Mike Tzou (Chocobo1)" "\n"
 	"\n"
-	"This plugin links statically with the following open source library:\n"
-	"TinyXML-2, http://www.grinninglizard.com/tinyxml2/\n"
+	"This plugin links with the following libraries:" "\n"
+	"* foobar2000 SDK " xstr(FOOBAR2000_SDK_VERSION) "  https://www.foobar2000.org/SDK" "\n"
+	"* TinyXML-2 " xstr(TINYXML2_MAJOR_VERSION) "." xstr(TINYXML2_MINOR_VERSION) "." xstr(TINYXML2_PATCH_VERSION) "  https://github.com/leethomason/tinyxml2" "\n"
 );
 
 VALIDATE_COMPONENT_FILENAME("foo_xspf_1.dll");
