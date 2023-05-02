@@ -50,6 +50,8 @@ DECLARE_COMPONENT_VERSION
 	"TinyXML-2, http://www.grinninglizard.com/tinyxml2/\n"
 );
 
+VALIDATE_COMPONENT_FILENAME("foo_xspf_1.dll");
+
 
 const char *xspf::get_extension()
 {
