@@ -31,7 +31,6 @@ os: Visual Studio 2022
 environment:
   REPO_DIR: &REPO_DIR c:\project  # directory created by appveyor
 
-  FBSDK_DIR: c:\fbsdk
   FBSDK_VERSION: 2023-04-18
 
   SOL_FILE: foo_xspf_1.sln
@@ -53,10 +52,8 @@ before_build:
   - git submodule update --init --recursive --depth 1
 
   # prepare foobar2000 SDK
-  - cd \
-  - powershell -Command "& { $wc = New-Object Net.WebClient; $wc.DownloadFile( 'https://www.foobar2000.org/files/SDK-%FBSDK_VERSION%.7z' , 'fbsdk.7z' ); }" > nul
-  - 7z x "fbsdk.7z" -o"%FBSDK_DIR%" > nul
-  - robocopy "%FBSDK_DIR%" "%REPO_DIR%\lib\foobar2000_sdk" /E > nul & exit 0
+  - powershell -Command "& { (New-Object System.Net.WebClient).DownloadFile( 'https://www.foobar2000.org/files/SDK-%FBSDK_VERSION%.7z', 'c:\fbsdk.7z' ); }"
+  - 7z x "c:\fbsdk.7z" -o"%REPO_DIR%\lib\foobar2000_sdk" > nul
 
   # replace project files
   - copy /Y "%REPO_DIR%\lib\vcxproj\foobar2000_component_client.vcxproj" "%REPO_DIR%\lib\foobar2000_sdk\foobar2000\foobar2000_component_client"
